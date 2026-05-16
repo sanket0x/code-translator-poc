@@ -373,19 +373,19 @@ function updateApiKeyStatus(message, type) {
 
 // Role-based default prompts
 const ROLE_PROMPTS = {
-    'developer': `Review this code change for implementation quality. Flag any potential bugs, performance issues, anti-patterns, or security concerns. Highlight non-obvious logic that future maintainers should understand.`,
+    'developer': `Review this code change for implementation quality. Flag any potential bugs, performance issues, anti-patterns, or security concerns. Highlight non-obvious logic that future maintainers should understand. Keep your summary to maximum 5 lines.`,
     
-    'product-manager': `Analyze this code change from a product perspective. Does it fulfill the stated requirements? Are there any scope gaps, missing edge cases from the spec, or unintended behavior changes that could affect users?`,
+    'product-manager': `Analyze this code change from a product perspective. Does it fulfill the stated requirements? Are there any scope gaps, missing edge cases from the spec, or unintended behavior changes that could affect users? Keep your summary to maximum 5 lines.`,
     
-    'designer': `Identify any UI/UX-impacting changes in this diff. Look for hardcoded strings, layout or spacing changes, new user-facing states (loading, error, empty), and flag anything that might break visual consistency.`,
+    'designer': `Identify any UI/UX-impacting changes in this diff. Look for hardcoded strings, layout or spacing changes, new user-facing states (loading, error, empty), and flag anything that might break visual consistency. Keep your summary to maximum 5 lines.`,
     
-    'documentation': `Summarize what changed in plain English for documentation purposes. List any new or modified APIs, parameters, or behaviors that need to be reflected in user-facing or internal docs.`,
+    'documentation': `Summarize what changed in plain English for documentation purposes. List any new or modified APIs, parameters, or behaviors that need to be reflected in user-facing or internal docs. Keep your summary to maximum 5 lines.`,
     
-    'customer-support': `Explain what this change means for end users in simple, non-technical terms. Will users notice anything different? Are there new error messages, changed workflows, or known limitations they might ask about?`,
+    'customer-support': `Explain what this change means for end users in simple, non-technical terms. Will users notice anything different? Are there new error messages, changed workflows, or known limitations they might ask about? Keep your summary to maximum 5 lines.`,
     
-    'engineering-manager': `Give a high-level summary of this change: what problem it solves, its approach, estimated complexity, and any risks around deployment, rollback, or cross-team dependencies.`,
+    'engineering-manager': `Give a high-level summary of this change: what problem it solves, its approach, estimated complexity, and any risks around deployment, rollback, or cross-team dependencies. Keep your summary to maximum 5 lines.`,
     
-    'qa': `Identify scenarios that need testing in this change. List happy paths, edge cases, boundary conditions, and any regression risks. Flag areas where existing tests may be insufficient.`
+    'qa': `Identify scenarios that need testing in this change. List happy paths, edge cases, boundary conditions, and any regression risks. Flag areas where existing tests may be insufficient. Keep your summary to maximum 5 lines.`
 };
 
 function addUser() {
@@ -679,12 +679,14 @@ function initEventListeners() {
     const closeModal = document.getElementById('closeModal');
     const modalOverlay = document.getElementById('modalOverlay');
     const cancelTaskBtn = document.getElementById('cancelTaskBtn');
+    const saveTaskBtn = document.getElementById('saveTaskBtn');
     
     newTaskBtn.addEventListener('click', openNewTaskModal);
     clearAllBtn.addEventListener('click', clearAllData);
     closeModal.addEventListener('click', closeTaskModal);
     modalOverlay.addEventListener('click', closeTaskModal);
     cancelTaskBtn.addEventListener('click', closeTaskModal);
+    saveTaskBtn.addEventListener('click', saveTask);
     
     // Character counters
     const taskTitle = document.getElementById('taskTitle');
@@ -978,9 +980,6 @@ function addUserTagToTask(userId) {
     
     // Re-render tags
     renderTaggedUsers(task);
-    
-    // Save
-    saveToLocalStorage();
 }
 
 function removeUserTagFromTask(userId) {
@@ -995,9 +994,6 @@ function removeUserTagFromTask(userId) {
     
     // Re-render tags
     renderTaggedUsers(task);
-    
-    // Save
-    saveToLocalStorage();
 }
 
 function renderTaggedUsers(task) {
