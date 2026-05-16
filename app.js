@@ -712,7 +712,20 @@ function initEventListeners() {
 function openNewTaskModal() {
     console.log('📝 Opening new task modal');
     
-    AppState.currentEditingTask = null;
+    // Create a temporary task for tagging
+    const tempTask = {
+        id: `temp-${Date.now()}`,
+        title: '',
+        description: '',
+        status: 'todo',
+        comments: [],
+        taggedUsers: [],
+        createdAt: new Date().toISOString()
+    };
+    
+    // Add to tasks array temporarily
+    AppState.tasks.push(tempTask);
+    AppState.currentEditingTask = tempTask.id;
     
     // Reset form
     document.getElementById('modalTitle').textContent = 'New Task';
@@ -742,6 +755,11 @@ function openNewTaskModal() {
 
 function closeTaskModal() {
     console.log('❌ Closing task modal');
+    
+    // Remove temporary task if it exists
+    if (AppState.currentEditingTask && AppState.currentEditingTask.startsWith('temp-')) {
+        AppState.tasks = AppState.tasks.filter(t => t.id !== AppState.currentEditingTask);
+    }
     
     document.getElementById('taskModal').classList.remove('show');
     document.getElementById('modalOverlay').classList.remove('show');

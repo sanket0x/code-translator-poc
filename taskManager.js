@@ -334,9 +334,18 @@ const TaskManager = {
         }
         
         if (!taskId) {
-            // Creating new task - get tagged users from temporary state
+            // Should not happen with new approach
             const task = this.createTask(title, description);
-            // Tagged users are already being saved via addUserTagToTask
+        } else if (taskId.startsWith('temp-')) {
+            // Converting temporary task to real task
+            const tempTask = this.getTaskById(taskId);
+            const taggedUsers = tempTask ? tempTask.taggedUsers : [];
+            
+            // Remove temporary task
+            AppState.tasks = AppState.tasks.filter(t => t.id !== taskId);
+            
+            // Create real task with tagged users
+            const task = this.createTask(title, description, taggedUsers);
         } else {
             // Updating existing task
             const task = this.getTaskById(taskId);
