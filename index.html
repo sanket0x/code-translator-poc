@@ -9,35 +9,26 @@
     <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css">
 </head>
 <body>
-    <!-- Header -->
+    <!-- Header with Navigation -->
     <header class="header">
         <div class="header-content">
             <h1 class="header-title">🔄 Code Translator POC</h1>
-            <div class="api-key-container">
-                <input
-                    type="password"
-                    id="apiKeyInput"
-                    class="api-key-input"
-                    placeholder="Gemini API Key"
-                    title="Enter your API key"
-                />
-                <button id="saveApiKeyBtn" class="btn-primary btn-small">Save</button>
-                <span id="apiKeyStatus" class="api-key-status"></span>
-            </div>
+            <nav class="header-navigation">
+                <button class="tab-btn active" data-tab="jira">
+                    <span class="tab-icon">📋</span>
+                    <span class="tab-label">Tasks</span>
+                </button>
+                <button class="tab-btn" data-tab="editor">
+                    <span class="tab-icon">💻</span>
+                    <span class="tab-label">Code Editor</span>
+                </button>
+                <button class="tab-btn" data-tab="settings">
+                    <span class="tab-icon">⚙️</span>
+                    <span class="tab-label">User Settings</span>
+                </button>
+            </nav>
         </div>
     </header>
-
-    <!-- Tab Navigation -->
-    <nav class="tab-navigation">
-        <button class="tab-btn active" data-tab="jira">
-            <span class="tab-icon">📋</span>
-            <span class="tab-label">Jira/Tasks</span>
-        </button>
-        <button class="tab-btn" data-tab="editor">
-            <span class="tab-icon">💻</span>
-            <span class="tab-label">Code Editor</span>
-        </button>
-    </nav>
 
     <!-- Main Content Area -->
     <main class="main-content">
@@ -96,22 +87,33 @@
         <div id="editorTab" class="tab-content">
             <div class="editor-container">
                 <div class="editor-header">
-                    <label for="languageSelect" class="editor-label">Language:</label>
-                    <select id="languageSelect" class="language-select">
-                        <option value="go">Go</option>
-                        <option value="python">Python</option>
-                        <option value="java">Java</option>
-                    </select>
+                    <div class="editor-controls">
+                        <label for="languageSelect" class="editor-label">Language:</label>
+                        <select id="languageSelect" class="language-select">
+                            <option value="go">Go</option>
+                            <option value="python">Python</option>
+                            <option value="java">Java</option>
+                        </select>
+                    </div>
+                    <div class="editor-controls">
+                        <label for="programSelect" class="editor-label">Program:</label>
+                        <select id="programSelect" class="language-select">
+                            <option value="custom">Custom</option>
+                            <option value="api-handler">REST API Handler</option>
+                            <option value="data-validation">Data Validation</option>
+                            <option value="error-handler">Error Handler</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div id="monacoEditorContainer" class="monaco-editor-wrapper"></div>
 
                 <div class="pr-section">
                     <label for="prTitle" class="pr-label">PR Title:</label>
-                    <input 
-                        type="text" 
-                        id="prTitle" 
-                        class="pr-title-input" 
+                    <input
+                        type="text"
+                        id="prTitle"
+                        class="pr-title-input"
                         placeholder="e.g., task-1: Add user authentication"
                     />
                     <button id="createPrBtn" class="btn-primary btn-large">
@@ -120,6 +122,82 @@
                 </div>
 
                 <div id="prStatus" class="pr-status"></div>
+            </div>
+        </div>
+
+        <!-- Tab 3: User Settings -->
+        <div id="settingsTab" class="tab-content">
+            <div class="settings-container">
+                <h2 class="settings-title">⚙️ User Settings</h2>
+                
+                <!-- API Provider Section -->
+                <section class="settings-section">
+                    <h3 class="section-title">🔑 API Provider Configuration</h3>
+                    <div class="provider-selection">
+                        <label class="radio-label">
+                            <input type="radio" name="provider" value="gemini" checked>
+                            <span class="radio-text">
+                                <strong>Google Gemini 1.5 Flash</strong>
+                            </span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="provider" value="openai">
+                            <span class="radio-text">
+                                <strong>OpenAI GPT-3.5 Turbo</strong>
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <div class="api-key-section">
+                        <label for="settingsApiKey" class="input-label">API Key:</label>
+                        <input
+                            type="password"
+                            id="settingsApiKey"
+                            class="settings-input"
+                            placeholder="Enter your API key..."
+                        />
+                        <div class="button-group">
+                            <button id="saveApiKeyBtn" class="btn-primary">💾 Save API Key</button>
+                            <button id="clearApiKeyBtn" class="btn-secondary">🗑️ Clear API Key</button>
+                        </div>
+                        <span id="apiKeyStatus" class="status-message"></span>
+                        <p class="help-text" id="providerInstructions"></p>
+                    </div>
+                </section>
+                
+                <!-- Role Selection Section -->
+                <section class="settings-section">
+                    <h3 class="section-title">👤 Role Selection</h3>
+                    <div class="role-selection">
+                        <label for="roleSelect" class="input-label">I'm a:</label>
+                        <select id="roleSelect" class="settings-select">
+                            <option value="software-engineer">Software Engineer</option>
+                            <option value="product-manager">Product Manager</option>
+                            <option value="business-analyst">Business Analyst</option>
+                        </select>
+                    </div>
+                    <p class="help-text">This determines how code analysis is explained to you.</p>
+                </section>
+                
+                <!-- Custom Prompt Section -->
+                <section class="settings-section">
+                    <h3 class="section-title">✏️ Custom Prompt (Optional)</h3>
+                    <div class="warning-box">
+                        <span class="warning-icon">⚠️</span>
+                        <span class="warning-text">This will completely override default role-based prompts</span>
+                    </div>
+                    <textarea
+                        id="customPrompt"
+                        class="settings-textarea"
+                        rows="6"
+                        maxlength="64"
+                        placeholder="Enter your custom prompt here... (e.g., 'Explain this code as if I'm a 5-year-old')"
+                    ></textarea>
+                    <div class="char-counter">
+                        <span id="customPromptCharCount">0/64</span>
+                    </div>
+                    <button id="saveSettingsBtn" class="btn-primary btn-large">💾 Save All Settings</button>
+                </section>
             </div>
         </div>
     </main>

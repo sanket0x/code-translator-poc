@@ -1,6 +1,24 @@
 // ===== PR Processor Module =====
 // Handles PR creation, AI integration, and task matching
 
+// Role-based prompt templates
+const ROLE_PROMPTS = {
+    'software-engineer': `You are analyzing code changes from a software engineering perspective.
+Explain the technical implementation, architecture decisions, and code quality.
+Focus on: functionality, performance, maintainability, and best practices.
+Keep it concise (2-3 sentences) but technical.`,
+    
+    'product-manager': `You are analyzing code changes from a product management perspective.
+Explain the business value, user impact, and feature functionality.
+Focus on: what the feature does, user benefits, and business outcomes.
+Keep it concise (2-3 sentences) in business terms.`,
+    
+    'business-analyst': `You are analyzing code changes from a business analysis perspective.
+Explain the requirements being implemented and business logic.
+Focus on: business rules, data flow, and requirement fulfillment.
+Keep it concise (2-3 sentences) focusing on requirements.`
+};
+
 // AI Provider Configuration
 const AI_PROVIDERS = {
     openai: {
@@ -18,9 +36,6 @@ const AI_PROVIDERS = {
         authPrefix: ''
     }
 };
-
-// Get current provider from config
-let currentProvider = window.APP_CONFIG?.aiProvider || 'gemini';
 
 const PRProcessor = {
     // ===== Available Models Cache =====
@@ -86,16 +101,44 @@ const PRProcessor = {
         return null;
     },
     
-    // ===== GPT Integration =====
+    // ===== Prompt Construction =====
     
-    async analyzeCodeWithAI(code, language) {
-        // Get API key from AppState or localStorage
-        const apiKey = AppState.apiKey || localStorage.getItem('openai_api_key');
+    constructPrompt(code, language) {
+        const settings = AppState.userSettings;
         
-        if (!apiKey || apiKey.trim() === '') {
-            throw new Error('API key not found. Please add your API key in the header and click save.');
+        // If custom prompt exists, use it (complete override)
+        if (settings.customPrompt && settings.customPrompt.trim()) {
+            return `${settings.customPrompt}
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\``;
         }
         
+        // Otherwise, use role-based prompt
+        const rolePrompt = ROLE_PROMPTS[settings.role] || ROLE_PROMPTS['software-engineer'];
+        
+        return `${rolePrompt}
+
+Analyze this ${language} code:
+
+\`\`\`${language}
+${code}
+\`\`\``;
+    },
+    
+    // ===== AI Integration =====
+    
+    async analyzeCodeWithAI(code, language) {
+        // Get API key from user settings
+        const apiKey = AppState.userSettings.apiKey;
+        
+        if (!apiKey || apiKey.trim() === '') {
+            throw new Error('API key not found. Please add your API key in User Settings tab.');
+        }
+        
+        const currentProvider = AppState.userSettings.provider;
         const provider = AI_PROVIDERS[currentProvider];
         
         // For Gemini, get available models if not already cached
@@ -104,17 +147,13 @@ const PRProcessor = {
         }
         
         console.log(`🤖 Calling ${provider.name} to analyze code...`);
+        console.log(`👤 Using role: ${AppState.userSettings.role}`);
+        console.log(`📝 Custom prompt: ${AppState.userSettings.customPrompt ? 'Yes' : 'No'}`);
         
-        const prompt = `Analyze this ${language} code and explain what it does in 2-3 sentences in simple business terms. Focus on the functionality and purpose, not implementation details.
-
-Code:
-\`\`\`${language}
-${code}
-\`\`\`
-
-Provide a concise explanation suitable for a non-technical stakeholder.`;
+        const prompt = this.constructPrompt(code, language);
         
         try {
+            const currentProvider = AppState.userSettings.provider;
             let requestBody, response;
             
             if (currentProvider === 'openai') {
@@ -123,15 +162,11 @@ Provide a concise explanation suitable for a non-technical stakeholder.`;
                     model: provider.model,
                     messages: [
                         {
-                            role: 'system',
-                            content: 'You are a code analyzer that explains code changes in simple business terms for non-technical stakeholders. Be concise and focus on what the code does, not how it does it.'
-                        },
-                        {
                             role: 'user',
                             content: prompt
                         }
                     ],
-                    max_tokens: 200,
+                    max_tokens: 300,
                     temperature: 0.7
                 };
             } else if (currentProvider === 'gemini') {
@@ -139,7 +174,7 @@ Provide a concise explanation suitable for a non-technical stakeholder.`;
                 requestBody = {
                     contents: [{
                         parts: [{
-                            text: `You are a code analyzer that explains code changes in simple business terms for non-technical stakeholders. Be concise and focus on what the code does, not how it does it.\n\n${prompt}`
+                            text: prompt
                         }]
                     }],
                     generationConfig: {
@@ -280,19 +315,15 @@ Provide a concise explanation suitable for a non-technical stakeholder.`;
             return;
         }
         
-        // Check API key from both AppState and localStorage
-        const apiKey = AppState.apiKey || localStorage.getItem('openai_api_key');
+        // Check API key from user settings
+        const apiKey = AppState.userSettings.apiKey;
         if (!apiKey || apiKey.trim() === '') {
-            this.showStatus('❌ Please add your OpenAI API key in the header and click save', 'error');
+            this.showStatus('❌ Please add your API key in User Settings tab', 'error');
             return;
         }
         
-        // Update AppState if it was loaded from localStorage
-        if (!AppState.apiKey && apiKey) {
-            AppState.apiKey = apiKey;
-        }
-        
         // Show loading state
+        const currentProvider = AppState.userSettings.provider;
         const provider = AI_PROVIDERS[currentProvider];
         this.showStatus(`🔄 Analyzing code with ${provider.name}...`, 'loading');
         this.disableCreateButton(true);

@@ -1,7 +1,12 @@
 // ===== Application State =====
 const AppState = {
     currentTab: 'jira',
-    apiKey: localStorage.getItem('openai_api_key') || '',
+    userSettings: {
+        provider: 'gemini',
+        apiKey: '',
+        role: 'software-engineer',
+        customPrompt: ''
+    },
     tasks: [],
     nextTaskId: 1,
     currentEditingTask: null,
@@ -33,6 +38,123 @@ if __name__ == "__main__":
 }`
 };
 
+// ===== Program Templates =====
+const PROGRAM_TEMPLATES = {
+    custom: {
+        go: DEFAULT_SNIPPETS.go,
+        python: DEFAULT_SNIPPETS.python,
+        java: DEFAULT_SNIPPETS.java
+    },
+    'api-handler': {
+        go: `package main
+
+import (
+    "encoding/json"
+    "net/http"
+)
+
+type User struct {
+    ID   int    \`json:"id"\`
+    Name string \`json:"name"\`
+}
+
+func getUserHandler(w http.ResponseWriter, r *http.Request) {
+    user := User{ID: 1, Name: "John Doe"}
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(user)
+}`,
+        python: `from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.route('/api/user/<int:user_id>')
+def get_user(user_id):
+    user = {'id': user_id, 'name': 'John Doe'}
+    return jsonify(user)`,
+        java: `@RestController
+@RequestMapping("/api")
+public class UserController {
+    
+    @GetMapping("/user/{id}")
+    public User getUser(@PathVariable Long id) {
+        return new User(id, "John Doe");
+    }
+}`
+    },
+    'data-validation': {
+        go: `package main
+
+import (
+    "errors"
+    "regexp"
+)
+
+func validateEmail(email string) error {
+    pattern := \`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$\`
+    matched, _ := regexp.MatchString(pattern, email)
+    if !matched {
+        return errors.New("invalid email format")
+    }
+    return nil
+}`,
+        python: `import re
+
+def validate_email(email):
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        return "Invalid email format"
+    return None`,
+        java: `public class Validator {
+    
+    private static final String EMAIL_PATTERN =
+        "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+    
+    public boolean isValidEmail(String email) {
+        return email.matches(EMAIL_PATTERN);
+    }
+}`
+    },
+    'error-handler': {
+        go: `package main
+
+import (
+    "fmt"
+    "net/http"
+)
+
+type AppError struct {
+    Code    int
+    Message string
+}
+
+func handleError(w http.ResponseWriter, err *AppError) {
+    w.WriteHeader(err.Code)
+    fmt.Fprintf(w, \`{"error": "%s"}\`, err.Message)
+}`,
+        python: `from flask import jsonify
+
+class AppError(Exception):
+    def __init__(self, message, status_code=500):
+        self.message = message
+        self.status_code = status_code
+
+@app.errorhandler(AppError)
+def handle_error(error):
+    return jsonify({'error': error.message}), error.status_code`,
+        java: `@ControllerAdvice
+public class ErrorHandler {
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleError(Exception ex) {
+        ErrorResponse error = new ErrorResponse(
+            500, ex.getMessage()
+        );
+        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+}`
+    }
+};
+
 // ===== Monaco Editor Instance =====
 let monacoEditor = null;
 
@@ -46,8 +168,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize tab navigation
     initTabNavigation();
     
-    // Initialize API key
-    initApiKey();
+    // Initialize User Settings
+    initUserSettings();
     
     // Initialize Monaco Editor
     initMonacoEditor();
@@ -100,37 +222,172 @@ function switchTab(tabName) {
     }
 }
 
-// ===== API Key Management =====
-function initApiKey() {
-    const apiKeyInput = document.getElementById('apiKeyInput');
-    const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
-    const apiKeyStatus = document.getElementById('apiKeyStatus');
+// ===== User Settings Management =====
+function initUserSettings() {
+    // Load user settings from localStorage
+    loadUserSettings();
     
-    // Load saved API key
-    if (AppState.apiKey) {
-        apiKeyInput.value = AppState.apiKey;
-        updateApiKeyStatus('✓ Saved', 'success');
+    // Provider selection
+    const providerRadios = document.querySelectorAll('input[name="provider"]');
+    providerRadios.forEach(radio => {
+        radio.addEventListener('change', handleProviderChange);
+    });
+    
+    // API Key buttons
+    document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
+    document.getElementById('clearApiKeyBtn').addEventListener('click', clearApiKey);
+    
+    // Role selection
+    document.getElementById('roleSelect').addEventListener('change', handleRoleChange);
+    
+    // Custom prompt
+    document.getElementById('customPrompt').addEventListener('input', handleCustomPromptChange);
+    
+    // Save settings button
+    document.getElementById('saveSettingsBtn').addEventListener('click', saveAllSettings);
+    
+    // Update UI with current provider
+    updateProviderUI();
+    
+    console.log('⚙️ User settings initialized');
+}
+
+function loadUserSettings() {
+    const saved = localStorage.getItem('user_settings');
+    if (saved) {
+        try {
+            AppState.userSettings = JSON.parse(saved);
+            console.log('📂 User settings loaded from localStorage');
+        } catch (error) {
+            console.error('❌ Error loading user settings:', error);
+            // Use defaults
+            AppState.userSettings = {
+                provider: 'gemini',
+                apiKey: '',
+                role: 'software-engineer',
+                customPrompt: ''
+            };
+        }
+    } else {
+        console.log('📂 No saved settings found, using defaults');
     }
     
-    // Save API key
-    saveApiKeyBtn.addEventListener('click', () => {
-        const apiKey = apiKeyInput.value.trim();
-        
-        if (apiKey) {
-            AppState.apiKey = apiKey;
-            localStorage.setItem('openai_api_key', apiKey);
-            updateApiKeyStatus('✓ Saved', 'success');
-            console.log('🔑 API key saved');
-        } else {
-            updateApiKeyStatus('✗ Empty', 'error');
+    // Update UI with loaded settings
+    const providerRadio = document.querySelector(`input[name="provider"][value="${AppState.userSettings.provider}"]`);
+    if (providerRadio) providerRadio.checked = true;
+    
+    document.getElementById('settingsApiKey').value = AppState.userSettings.apiKey || '';
+    document.getElementById('roleSelect').value = AppState.userSettings.role || 'software-engineer';
+    
+    const customPromptValue = AppState.userSettings.customPrompt || '';
+    document.getElementById('customPrompt').value = customPromptValue;
+    updateCustomPromptCharCount(customPromptValue.length);
+}
+
+function saveUserSettings() {
+    localStorage.setItem('user_settings', JSON.stringify(AppState.userSettings));
+    console.log('💾 User settings saved to localStorage');
+}
+
+function handleProviderChange(e) {
+    AppState.userSettings.provider = e.target.value;
+    updateProviderUI();
+    saveUserSettings();
+    console.log(`🔄 Provider changed to: ${e.target.value}`);
+}
+
+function updateProviderUI() {
+    const providers = {
+        gemini: {
+            instructions: 'Get your FREE API key from https://aistudio.google.com/app/apikey',
+            placeholder: 'AIza...'
+        },
+        openai: {
+            instructions: 'Get your API key from https://platform.openai.com/api-keys',
+            placeholder: 'sk-...'
         }
-    });
+    };
+    
+    const provider = providers[AppState.userSettings.provider];
+    const instructions = document.getElementById('providerInstructions');
+    const apiKeyInput = document.getElementById('settingsApiKey');
+    
+    if (instructions && provider) {
+        instructions.textContent = `ℹ️ ${provider.instructions}`;
+    }
+    if (apiKeyInput && provider) {
+        apiKeyInput.placeholder = provider.placeholder;
+    }
+}
+
+function saveApiKey() {
+    const apiKey = document.getElementById('settingsApiKey').value.trim();
+    
+    if (apiKey) {
+        AppState.userSettings.apiKey = apiKey;
+        saveUserSettings();
+        updateApiKeyStatus('✓ API Key Saved', 'success');
+        console.log('🔑 API key saved');
+    } else {
+        updateApiKeyStatus('✗ Please enter an API key', 'error');
+    }
+}
+
+function clearApiKey() {
+    if (confirm('⚠️ Are you sure you want to clear your API key?')) {
+        AppState.userSettings.apiKey = '';
+        document.getElementById('settingsApiKey').value = '';
+        saveUserSettings();
+        updateApiKeyStatus('🗑️ API Key Cleared', 'success');
+        console.log('🗑️ API key cleared');
+    }
 }
 
 function updateApiKeyStatus(message, type) {
-    const apiKeyStatus = document.getElementById('apiKeyStatus');
-    apiKeyStatus.textContent = message;
-    apiKeyStatus.className = `api-key-status ${type}`;
+    const status = document.getElementById('apiKeyStatus');
+    status.textContent = message;
+    status.className = `status-message show ${type}`;
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+        status.className = 'status-message';
+    }, 3000);
+}
+
+function handleRoleChange(e) {
+    AppState.userSettings.role = e.target.value;
+    saveUserSettings();
+    console.log(`👤 Role changed to: ${e.target.value}`);
+}
+
+function handleCustomPromptChange(e) {
+    AppState.userSettings.customPrompt = e.target.value;
+    updateCustomPromptCharCount(e.target.value.length);
+    // Don't auto-save on every keystroke, wait for Save button
+}
+
+function updateCustomPromptCharCount(count) {
+    const counter = document.getElementById('customPromptCharCount');
+    if (counter) {
+        counter.textContent = `${count}/64`;
+        
+        // Change color if approaching limit
+        if (count > 57) {
+            counter.style.color = 'var(--warning-amber)';
+        } else {
+            counter.style.color = 'var(--text-light)';
+        }
+    }
+}
+
+function saveAllSettings() {
+    // Save custom prompt
+    AppState.userSettings.customPrompt = document.getElementById('customPrompt').value.trim();
+    saveUserSettings();
+    
+    // Show success message
+    alert('✅ All settings saved successfully!');
+    console.log('💾 All settings saved');
 }
 
 // ===== Monaco Editor Initialization =====
@@ -140,8 +397,12 @@ function initMonacoEditor() {
     require(['vs/editor/editor.main'], function () {
         const container = document.getElementById('monacoEditorContainer');
         
+        // Get initial code - use saved code or default template
+        const initialCode = AppState.codeEditorState.code ||
+                           PROGRAM_TEMPLATES.custom[AppState.codeEditorState.language];
+        
         monacoEditor = monaco.editor.create(container, {
-            value: AppState.codeEditorState.code || DEFAULT_SNIPPETS[AppState.codeEditorState.language],
+            value: initialCode,
             language: AppState.codeEditorState.language,
             theme: 'vs-dark',
             automaticLayout: true,
@@ -191,6 +452,10 @@ function initEventListeners() {
     // Code editor language selector
     const languageSelect = document.getElementById('languageSelect');
     languageSelect.addEventListener('change', handleLanguageChange);
+    
+    // Program template selector
+    const programSelect = document.getElementById('programSelect');
+    programSelect.addEventListener('change', handleProgramChange);
     
     // PR controls
     const prTitle = document.getElementById('prTitle');
@@ -253,6 +518,7 @@ function saveTask() {
 // ===== Code Editor Management =====
 function handleLanguageChange(e) {
     const language = e.target.value;
+    const program = document.getElementById('programSelect').value;
     console.log(`🔄 Language changed to: ${language}`);
     
     AppState.codeEditorState.language = language;
@@ -262,9 +528,25 @@ function handleLanguageChange(e) {
         const model = monacoEditor.getModel();
         monaco.editor.setModelLanguage(model, language);
         
-        // Load default snippet for new language
-        monacoEditor.setValue(DEFAULT_SNIPPETS[language]);
-        AppState.codeEditorState.code = DEFAULT_SNIPPETS[language];
+        // Load template for current program and new language
+        const template = PROGRAM_TEMPLATES[program][language];
+        monacoEditor.setValue(template);
+        AppState.codeEditorState.code = template;
+    }
+    
+    saveToLocalStorage();
+}
+
+function handleProgramChange(e) {
+    const program = e.target.value;
+    const language = AppState.codeEditorState.language;
+    console.log(`📝 Program template changed to: ${program}`);
+    
+    if (monacoEditor) {
+        // Load template for selected program and current language
+        const template = PROGRAM_TEMPLATES[program][language];
+        monacoEditor.setValue(template);
+        AppState.codeEditorState.code = template;
     }
     
     saveToLocalStorage();
