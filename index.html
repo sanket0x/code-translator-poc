@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Translator POC</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Prism.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="header-title">🔄 Code Translator POC</h1>
+            <div class="api-key-container">
+                <input
+                    type="password"
+                    id="apiKeyInput"
+                    class="api-key-input"
+                    placeholder="Gemini API Key"
+                    title="Enter your API key"
+                />
+                <button id="saveApiKeyBtn" class="btn-primary btn-small">Save</button>
+                <span id="apiKeyStatus" class="api-key-status"></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tab-navigation">
+        <button class="tab-btn active" data-tab="jira">
+            <span class="tab-icon">📋</span>
+            <span class="tab-label">Jira/Tasks</span>
+        </button>
+        <button class="tab-btn" data-tab="editor">
+            <span class="tab-icon">💻</span>
+            <span class="tab-label">Code Editor</span>
+        </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <!-- Tab 1: Jira/Tasks Board -->
+        <div id="jiraTab" class="tab-content active">
+            <div class="tab-header">
+                <div class="tab-header-left">
+                    <button id="newTaskBtn" class="btn-primary">
+                        <span>➕</span> New Task
+                    </button>
+                </div>
+                <div class="tab-header-right">
+                    <button id="clearAllBtn" class="btn-secondary btn-danger">
+                        <span>🗑️</span> Clear All Tasks
+                    </button>
+                </div>
+            </div>
+            
+            <div class="kanban-board">
+                <div class="kanban-column" data-status="todo">
+                    <div class="column-header">
+                        <span class="column-icon">📝</span>
+                        <h2 class="column-title">To Do</h2>
+                        <span class="task-count" id="todoCount">0</span>
+                    </div>
+                    <div class="column-content" id="todoColumn">
+                        <!-- Tasks will be added here -->
+                    </div>
+                </div>
+
+                <div class="kanban-column" data-status="in-progress">
+                    <div class="column-header">
+                        <span class="column-icon">🔄</span>
+                        <h2 class="column-title">In Progress</h2>
+                        <span class="task-count" id="inProgressCount">0</span>
+                    </div>
+                    <div class="column-content" id="inProgressColumn">
+                        <!-- Tasks will be added here -->
+                    </div>
+                </div>
+
+                <div class="kanban-column" data-status="done">
+                    <div class="column-header">
+                        <span class="column-icon">✅</span>
+                        <h2 class="column-title">Done</h2>
+                        <span class="task-count" id="doneCount">0</span>
+                    </div>
+                    <div class="column-content" id="doneColumn">
+                        <!-- Tasks will be added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Code Editor -->
+        <div id="editorTab" class="tab-content">
+            <div class="editor-container">
+                <div class="editor-header">
+                    <label for="languageSelect" class="editor-label">Language:</label>
+                    <select id="languageSelect" class="language-select">
+                        <option value="go">Go</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                    </select>
+                </div>
+
+                <div class="code-editor-wrapper">
+                    <div class="line-numbers" id="lineNumbers"></div>
+                    <pre class="code-display"><code id="codeHighlight" class="language-go"></code></pre>
+                    <textarea
+                        id="codeEditor"
+                        class="code-editor"
+                        placeholder="Write your code here..."
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+
+                <div class="pr-section">
+                    <label for="prTitle" class="pr-label">PR Title:</label>
+                    <input 
+                        type="text" 
+                        id="prTitle" 
+                        class="pr-title-input" 
+                        placeholder="e.g., task-1: Add user authentication"
+                    />
+                    <button id="createPrBtn" class="btn-primary btn-large">
+                        Create PR
+                    </button>
+                </div>
+
+                <div id="prStatus" class="pr-status"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Task Modal (will be shown/hidden via JS) -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">New Task</h3>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="taskTitle">Title <span class="char-count" id="titleCharCount">0/80</span></label>
+                    <input 
+                        type="text" 
+                        id="taskTitle" 
+                        class="form-input" 
+                        maxlength="80"
+                        placeholder="Enter task title..."
+                    />
+                </div>
+                <div class="form-group">
+                    <label for="taskDescription">Description <span class="char-count" id="descCharCount">0/255</span></label>
+                    <textarea 
+                        id="taskDescription" 
+                        class="form-textarea" 
+                        maxlength="255"
+                        placeholder="Enter task description..."
+                        rows="4"
+                    ></textarea>
+                </div>
+                <div id="taskComments" class="task-comments">
+                    <!-- Comments will be displayed here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelTaskBtn" class="btn-secondary">Cancel</button>
+                <button id="saveTaskBtn" class="btn-primary">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay for modal -->
+    <div id="modalOverlay" class="modal-overlay"></div>
+
+    <!-- Prism.js Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    
+    <!-- JavaScript -->
+    <script src="config.js"></script>
+    <script src="taskManager.js"></script>
+    <script src="prProcessor.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
