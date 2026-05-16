@@ -681,6 +681,7 @@ function initEventListeners() {
     const modalOverlay = document.getElementById('modalOverlay');
     const cancelTaskBtn = document.getElementById('cancelTaskBtn');
     const saveTaskBtn = document.getElementById('saveTaskBtn');
+    const deleteTaskBtn = document.getElementById('deleteTaskBtn');
     
     newTaskBtn.addEventListener('click', openNewTaskModal);
     clearAllBtn.addEventListener('click', clearAllData);
@@ -688,6 +689,7 @@ function initEventListeners() {
     modalOverlay.addEventListener('click', closeTaskModal);
     cancelTaskBtn.addEventListener('click', closeTaskModal);
     saveTaskBtn.addEventListener('click', saveTask);
+    deleteTaskBtn.addEventListener('click', deleteCurrentTask);
     
     // Character counters
     const taskTitle = document.getElementById('taskTitle');
@@ -751,12 +753,40 @@ function openNewTaskModal() {
     // Populate user tag dropdown
     populateUserTagDropdown();
     
+    // Hide delete button for new tasks
+    const deleteBtn = document.getElementById('deleteTaskBtn');
+    if (deleteBtn) {
+        deleteBtn.style.display = 'none';
+    }
+    
     // Show modal
     document.getElementById('taskModal').classList.add('show');
     document.getElementById('modalOverlay').classList.add('show');
     
     // Focus on title input
     document.getElementById('taskTitle').focus();
+}
+
+function deleteCurrentTask() {
+    const taskId = AppState.currentEditingTask;
+    
+    // Don't allow deleting temp tasks
+    if (!taskId || taskId.startsWith('temp-')) {
+        return;
+    }
+    
+    const task = TaskManager.getTaskById(taskId);
+    if (!task) {
+        return;
+    }
+    
+    const confirmed = confirm(`⚠️ Are you sure you want to delete "${task.title}"?\n\nThis action cannot be undone.`);
+    
+    if (confirmed) {
+        TaskManager.deleteTask(taskId);
+        closeTaskModal();
+        console.log(`🗑️ Task deleted: ${taskId}`);
+    }
 }
 
 function closeTaskModal() {

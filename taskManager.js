@@ -280,6 +280,12 @@ const TaskManager = {
         // Render comments
         this.renderComments(task);
         
+        // Show delete button for existing tasks
+        const deleteBtn = document.getElementById('deleteTaskBtn');
+        if (deleteBtn) {
+            deleteBtn.style.display = 'block';
+        }
+        
         // Show modal
         document.getElementById('taskModal').classList.add('show');
         document.getElementById('modalOverlay').classList.add('show');
@@ -369,8 +375,22 @@ const TaskManager = {
         // First escape HTML to prevent XSS
         let formatted = this.escapeHtml(text);
         
-        // Then convert **text** to <strong>text</strong>
+        // Convert markdown headers to HTML
+        // ### Header 3 -> <h3>Header 3</h3>
+        formatted = formatted.replace(/^### (.+)$/gm, '<h3 style="font-size: 1.1em; font-weight: bold; margin: 0.5em 0;">$1</h3>');
+        // ## Header 2 -> <h2>Header 2</h2>
+        formatted = formatted.replace(/^## (.+)$/gm, '<h2 style="font-size: 1.2em; font-weight: bold; margin: 0.5em 0;">$1</h2>');
+        // # Header 1 -> <h1>Header 1</h1>
+        formatted = formatted.replace(/^# (.+)$/gm, '<h1 style="font-size: 1.3em; font-weight: bold; margin: 0.5em 0;">$1</h1>');
+        
+        // Convert **text** to <strong>text</strong>
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert *text* to <em>text</em>
+        formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        
+        // Convert `code` to <code>code</code>
+        formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #f4f4f4; padding: 2px 4px; border-radius: 3px; font-family: monospace;">$1</code>');
         
         // Convert line breaks to <br>
         formatted = formatted.replace(/\n/g, '<br>');

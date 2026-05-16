@@ -109,7 +109,7 @@
                 <div id="monacoEditorContainer" class="monaco-editor-wrapper"></div>
 
                 <div class="pr-section">
-                    <label for="prTitle" class="pr-label">PR Title: <span style="font-size: 0.85em; color: #666; font-weight: normal;">(must include task name, e.g., task-1: Description)</span></label>
+                    <label for="prTitle" class="pr-label">PR Title <span style="font-size: 0.85em; color: #666; font-weight: normal;">(must include task name, e.g., task-1: Description)</span></label>
                     <input
                         type="text"
                         id="prTitle"
@@ -226,8 +226,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="saveTaskBtn" class="btn-primary">💾 Save Task</button>
-                <button id="cancelTaskBtn" class="btn-secondary">Close</button>
+                <button id="deleteTaskBtn" class="btn-danger">Delete</button>
+                <div style="margin-left: auto; display: flex; gap: 8px;">
+                    <button id="cancelTaskBtn" class="btn-secondary">Close</button>
+                    <button id="saveTaskBtn" class="btn-primary">Save</button>
+                </div>
             </div>
         </div>
     </div>

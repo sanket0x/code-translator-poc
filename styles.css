@@ -167,20 +167,21 @@ body {
 }
 
 .btn-danger {
-    background-color: var(--card-white);
-    color: var(--error-red);
+    background-color: var(--error-red);
+    color: white;
     border: 1px solid var(--error-red);
 }
 
 .btn-danger:hover {
-    background-color: var(--error-red);
-    color: white;
+    background-color: #dc2626;
+    border-color: #dc2626;
 }
 
 /* ===== Buttons ===== */
 .btn-primary,
 .btn-secondary,
-.btn-icon {
+.btn-icon,
+.btn-danger {
     padding: var(--spacing-sm) var(--spacing-md);
     border: none;
     border-radius: var(--radius-md);
