@@ -217,60 +217,6 @@ All data is stored locally in your browser using localStorage:
 
 **Note**: Data persists until you clear your browser cache or use a different browser.
 
-## 🐛 Troubleshooting
-
-### Application won't load
-- Make sure you're opening `index.html` in a modern browser
-- Check the browser console (F12) for errors
-- Try using a local server instead of opening the file directly
-
-### Tasks not saving
-- Check if localStorage is enabled in your browser
-- Clear browser cache and reload
-- Check browser console for errors
-
-### API key not working
-- Verify your Google Gemini API key is valid
-- Check if you have API quota remaining
-- Look for error messages in the browser console
-
-### Monaco Editor not loading
-- Ensure you have internet connection (Monaco loads from CDN)
-- Check browser console for CDN loading errors
-- Try hard refresh (Ctrl+Shift+R or Cmd+Shift+R)
-
-### Styling looks broken
-- Make sure `styles.css` is in the same directory as `index.html`
-- Clear browser cache and hard reload (Ctrl+Shift+R or Cmd+Shift+R)
-
-## 📝 Current Status
-
-**All Core Features Complete!** ✅
-
-**Full End-to-End Workflow:**
-1. ✅ Create a task (e.g., "task-1: Add login feature")
-2. ✅ Write code in Monaco editor with full syntax highlighting
-3. ✅ Enter PR title with task number: "task-1: Implement OAuth login"
-4. ✅ Click "Create PR"
-5. ✅ Google Gemini analyzes your code
-6. ✅ Comment automatically added to task-1
-7. ✅ View the task to see the AI-generated explanation
-
-**All Features Working:**
-- ✅ Full Kanban board with drag-and-drop
-- ✅ Task creation and editing
-- ✅ Professional Monaco code editor with syntax highlighting
-- ✅ Google Gemini 1.5 Flash code analysis (FREE)
-- ✅ Automatic task linking and comments
-- ✅ Complete localStorage persistence
-
-## 🤝 Contributing
-
-This is a POC (Proof of Concept) project. Feel free to:
-- Report bugs
-- Suggest features
-- Submit pull requests
-
 ## 📄 License
 
 MIT License - feel free to use this project for learning or as a starting point for your own applications.
