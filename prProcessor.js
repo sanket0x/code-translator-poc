@@ -1,23 +1,7 @@
 // ===== PR Processor Module =====
 // Handles PR creation, AI integration, and task matching
 
-// Role-based prompt templates
-const ROLE_PROMPTS = {
-    'software-engineer': `You are analyzing code changes from a software engineering perspective.
-Explain the technical implementation, architecture decisions, and code quality.
-Focus on: functionality, performance, maintainability, and best practices.
-Keep it concise (2-3 sentences) but technical.`,
-    
-    'product-manager': `You are analyzing code changes from a product management perspective.
-Explain the business value, user impact, and feature functionality.
-Focus on: what the feature does, user benefits, and business outcomes.
-Keep it concise (2-3 sentences) in business terms.`,
-    
-    'business-analyst': `You are analyzing code changes from a business analysis perspective.
-Explain the requirements being implemented and business logic.
-Focus on: business rules, data flow, and requirement fulfillment.
-Keep it concise (2-3 sentences) focusing on requirements.`
-};
+// Note: ROLE_PROMPTS is now defined in app.js and shared globally
 
 // AI Provider Configuration
 const AI_PROVIDERS = {
@@ -29,9 +13,9 @@ const AI_PROVIDERS = {
         authPrefix: 'Bearer '
     },
     gemini: {
-        name: 'Google Gemini 1.5 Flash',
-        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-        model: 'gemini-1.5-flash',
+        name: 'Google Gemini 2.5 Flash',
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+        model: 'gemini-2.5-flash',
         authHeader: 'x-goog-api-key',
         authPrefix: ''
     }
@@ -103,23 +87,11 @@ const PRProcessor = {
     
     // ===== Prompt Construction =====
     
-    constructPrompt(code, language) {
-        const settings = AppState.userSettings;
+    constructPromptForUser(user, code, language) {
+        // Use user's specific prompt (edited or default role-based)
+        const prompt = user.prompt || ROLE_PROMPTS[user.role] || '';
         
-        // If custom prompt exists, use it (complete override)
-        if (settings.customPrompt && settings.customPrompt.trim()) {
-            return `${settings.customPrompt}
-
-Code:
-\`\`\`${language}
-${code}
-\`\`\``;
-        }
-        
-        // Otherwise, use role-based prompt
-        const rolePrompt = ROLE_PROMPTS[settings.role] || ROLE_PROMPTS['software-engineer'];
-        
-        return `${rolePrompt}
+        return `${prompt}
 
 Analyze this ${language} code:
 
@@ -130,7 +102,7 @@ ${code}
     
     // ===== AI Integration =====
     
-    async analyzeCodeWithAI(code, language) {
+    async analyzeCodeForUser(user, code, language) {
         // Get API key from user settings
         const apiKey = AppState.userSettings.apiKey;
         
@@ -141,16 +113,10 @@ ${code}
         const currentProvider = AppState.userSettings.provider;
         const provider = AI_PROVIDERS[currentProvider];
         
-        // For Gemini, get available models if not already cached
-        if (currentProvider === 'gemini' && !this.selectedModel) {
-            await this.listAvailableModels(apiKey);
-        }
+        console.log(`🤖 Calling ${provider.name} to analyze code for ${user.name}...`);
+        console.log(`👤 User role: ${user.role}`);
         
-        console.log(`🤖 Calling ${provider.name} to analyze code...`);
-        console.log(`👤 Using role: ${AppState.userSettings.role}`);
-        console.log(`📝 Custom prompt: ${AppState.userSettings.customPrompt ? 'Yes' : 'No'}`);
-        
-        const prompt = this.constructPrompt(code, language);
+        const prompt = this.constructPromptForUser(user, code, language);
         
         try {
             const currentProvider = AppState.userSettings.provider;
@@ -179,8 +145,28 @@ ${code}
                     }],
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 800
-                    }
+                        maxOutputTokens: 2048,
+                        candidateCount: 1,
+                        thinkingConfig: { thinkingBudget: 0 }
+                    },
+                    safetySettings: [
+                        {
+                            category: "HARM_CATEGORY_HARASSMENT",
+                            threshold: "BLOCK_NONE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_HATE_SPEECH",
+                            threshold: "BLOCK_NONE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                            threshold: "BLOCK_NONE"
+                        },
+                        {
+                            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                            threshold: "BLOCK_NONE"
+                        }
+                    ]
                 };
             }
             
@@ -191,8 +177,7 @@ ${code}
             
             if (currentProvider === 'gemini') {
                 // Gemini uses API key in URL parameter and dynamic model
-                const modelName = this.selectedModel || 'models/gemini-1.5-flash';
-                const endpoint = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent`;
+                const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
                 
                 console.log(`📡 Using endpoint: ${endpoint}`);
                 
@@ -273,27 +258,69 @@ ${code}
         
         console.log(`✅ Task ${taskId} found: "${task.title}"`);
         
-        // Step 4: Analyze code with AI
-        let explanation;
-        try {
-            explanation = await this.analyzeCodeWithAI(code, language);
-        } catch (error) {
-            throw new Error(`Failed to analyze code: ${error.message}`);
+        // Step 4: Get tagged users for this task
+        let users = [];
+        
+        if (task.taggedUsers && task.taggedUsers.length > 0) {
+            // Filter to only tagged users that are valid
+            users = task.taggedUsers
+                .map(userId => AppState.userSettings.users.find(u => u.id === userId))
+                .filter(u => u && u.name && u.name.trim() !== '' && u.role && u.role !== '');
+            
+            if (users.length === 0) {
+                throw new Error('No valid tagged users found for this task. Please tag at least one valid user.');
+            }
+            
+            console.log(`👥 Found ${users.length} tagged user(s) for this task`);
+        } else {
+            // No tagged users - use all valid users (backward compatibility)
+            users = AppState.userSettings.users.filter(u =>
+                u.name && u.name.trim() !== '' && u.role && u.role !== ''
+            );
+            
+            if (users.length === 0) {
+                throw new Error('No valid users configured. Please add at least one user with name and role in User Settings.');
+            }
+            
+            console.log(`👥 No tagged users - using all ${users.length} valid user(s)`);
         }
         
-        // Step 5: Format comment
-        const commentText = `Code changes: ${explanation}`;
+        // Step 5: Generate explanations for ALL users
+        const explanations = [];
+        for (const user of users) {
+            try {
+                console.log(`🔄 Analyzing code for ${user.name} (${user.role})...`);
+                const explanation = await this.analyzeCodeForUser(user, code, language);
+                explanations.push({
+                    userName: user.name,
+                    userRole: user.role,
+                    explanation: explanation
+                });
+                console.log(`✅ Analysis complete for ${user.name}`);
+            } catch (error) {
+                console.error(`❌ Failed to analyze for ${user.name}:`, error);
+                // Continue with other users even if one fails
+                explanations.push({
+                    userName: user.name,
+                    userRole: user.role,
+                    explanation: `Error: ${error.message}`
+                });
+            }
+        }
         
-        // Step 6: Add comment to task
-        TaskManager.addComment(taskId, commentText, 'code-translator');
+        // Step 6: Add all explanations as comments
+        for (const result of explanations) {
+            const commentText = `**${result.userName} (${result.userRole})**: ${result.explanation}`;
+            TaskManager.addComment(taskId, commentText, 'code-translator');
+        }
         
-        console.log(`✅ Comment added to ${taskId}`);
+        console.log(`✅ Added ${explanations.length} comment(s) to ${taskId}`);
         
         return {
             taskId,
             taskTitle: task.title,
-            explanation,
-            commentText
+            explanations,
+            userCount: explanations.length
         };
     },
     
@@ -329,11 +356,11 @@ ${code}
         this.disableCreateButton(true);
         
         try {
-            // Create PR and add comment
+            // Create PR and add comments for all users
             const result = await this.createPR(prTitle, code, language);
             
             // Show success message
-            const successMessage = `✅ Success! Comment added to ${result.taskId}`;
+            const successMessage = `✅ Success! Added ${result.userCount} comment(s) to ${result.taskId}`;
             this.showStatus(successMessage, 'success');
             
             // Show action buttons
@@ -398,6 +425,7 @@ ${code}
     
     showSuccessActions(taskId) {
         const statusDiv = document.getElementById('prStatus');
+        const userCount = AppState.userSettings.users.filter(u => u.name && u.role).length;
         
         // Create action buttons
         const actionsHtml = `
@@ -412,7 +440,7 @@ ${code}
         `;
         
         statusDiv.innerHTML = `
-            <div>✅ Success! Comment added to ${taskId}</div>
+            <div>✅ Success! Added ${userCount} comment(s) to ${taskId}</div>
             ${actionsHtml}
         `;
     },

@@ -4,13 +4,14 @@
 const TaskManager = {
     // ===== Task CRUD Operations =====
     
-    createTask(title, description) {
+    createTask(title, description, taggedUsers = []) {
         const task = {
             id: `task-${AppState.nextTaskId}`,
             title: title.trim(),
             description: description.trim(),
             status: 'todo',
             comments: [],
+            taggedUsers: taggedUsers || [],  // Array of user IDs
             createdAt: new Date().toISOString()
         };
         
@@ -268,6 +269,14 @@ const TaskManager = {
         updateCharCount('title', task.title.length, 80);
         updateCharCount('desc', task.description.length, 255);
         
+        // Populate user tag dropdown and render tagged users
+        if (typeof populateUserTagDropdown === 'function') {
+            populateUserTagDropdown();
+        }
+        if (typeof renderTaggedUsers === 'function') {
+            renderTaggedUsers(task);
+        }
+        
         // Render comments
         this.renderComments(task);
         
@@ -306,7 +315,7 @@ const TaskManager = {
                         <span>•</span>
                         <span>${timeAgo}</span>
                     </div>
-                    <div class="comment-text">${this.escapeHtml(comment.text)}</div>
+                    <div class="comment-text">${this.formatCommentText(comment.text)}</div>
                 </div>
             `;
         });
@@ -316,29 +325,25 @@ const TaskManager = {
     
     saveTaskFromModal() {
         const taskId = AppState.currentEditingTask;
+        const title = document.getElementById('taskTitle').value.trim();
+        const description = document.getElementById('taskDescription').value.trim();
+        
+        if (!title) {
+            alert('Please enter a task title');
+            return false;
+        }
         
         if (!taskId) {
-            // Creating new task
-            const title = document.getElementById('taskTitle').value.trim();
-            const description = document.getElementById('taskDescription').value.trim();
-            
-            if (!title) {
-                alert('Please enter a task title');
-                return false;
-            }
-            
-            this.createTask(title, description);
+            // Creating new task - get tagged users from temporary state
+            const task = this.createTask(title, description);
+            // Tagged users are already being saved via addUserTagToTask
         } else {
             // Updating existing task
-            const title = document.getElementById('taskTitle').value.trim();
-            const description = document.getElementById('taskDescription').value.trim();
-            
-            if (!title) {
-                alert('Please enter a task title');
-                return false;
+            const task = this.getTaskById(taskId);
+            if (task) {
+                // Tagged users are already saved via addUserTagToTask
+                this.updateTask(taskId, { title, description });
             }
-            
-            this.updateTask(taskId, { title, description });
         }
         
         return true;
@@ -350,6 +355,19 @@ const TaskManager = {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+    
+    formatCommentText(text) {
+        // First escape HTML to prevent XSS
+        let formatted = this.escapeHtml(text);
+        
+        // Then convert **text** to <strong>text</strong>
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert line breaks to <br>
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        return formatted;
     },
     
     saveAndRender() {

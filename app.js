@@ -4,8 +4,7 @@ const AppState = {
     userSettings: {
         provider: 'gemini',
         apiKey: '',
-        role: 'software-engineer',
-        customPrompt: ''
+        users: []  // Array of user objects: { id, name, role, prompt }
     },
     tasks: [],
     nextTaskId: 1,
@@ -14,7 +13,8 @@ const AppState = {
         language: 'go',
         code: '',
         prTitle: ''
-    }
+    },
+    nextUserId: 1  // Counter for generating unique user IDs
 };
 
 // ===== Default Code Snippets =====
@@ -237,14 +237,8 @@ function initUserSettings() {
     document.getElementById('saveApiKeyBtn').addEventListener('click', saveApiKey);
     document.getElementById('clearApiKeyBtn').addEventListener('click', clearApiKey);
     
-    // Role selection
-    document.getElementById('roleSelect').addEventListener('change', handleRoleChange);
-    
-    // Custom prompt
-    document.getElementById('customPrompt').addEventListener('input', handleCustomPromptChange);
-    
-    // Save settings button
-    document.getElementById('saveSettingsBtn').addEventListener('click', saveAllSettings);
+    // Add User button
+    document.getElementById('addUserBtn').addEventListener('click', addUser);
     
     // Update UI with current provider
     updateProviderUI();
@@ -256,7 +250,26 @@ function loadUserSettings() {
     const saved = localStorage.getItem('user_settings');
     if (saved) {
         try {
-            AppState.userSettings = JSON.parse(saved);
+            let loadedSettings = JSON.parse(saved);
+            
+            // Migration: Convert old single-user format to new multi-user format
+            if (loadedSettings.role && !loadedSettings.users) {
+                console.log('🔄 Migrating old user settings format...');
+                
+                // Migrate to new format but start with empty users array
+                loadedSettings = {
+                    provider: loadedSettings.provider,
+                    apiKey: loadedSettings.apiKey,
+                    users: []
+                };
+            }
+            
+            // Ensure users array exists
+            if (!loadedSettings.users) {
+                loadedSettings.users = [];
+            }
+            
+            AppState.userSettings = loadedSettings;
             console.log('📂 User settings loaded from localStorage');
         } catch (error) {
             console.error('❌ Error loading user settings:', error);
@@ -264,12 +277,16 @@ function loadUserSettings() {
             AppState.userSettings = {
                 provider: 'gemini',
                 apiKey: '',
-                role: 'software-engineer',
-                customPrompt: ''
+                users: []
             };
         }
     } else {
         console.log('📂 No saved settings found, using defaults');
+    }
+    
+    // Ensure users array exists in AppState
+    if (!AppState.userSettings.users) {
+        AppState.userSettings.users = [];
     }
     
     // Update UI with loaded settings
@@ -277,11 +294,9 @@ function loadUserSettings() {
     if (providerRadio) providerRadio.checked = true;
     
     document.getElementById('settingsApiKey').value = AppState.userSettings.apiKey || '';
-    document.getElementById('roleSelect').value = AppState.userSettings.role || 'software-engineer';
     
-    const customPromptValue = AppState.userSettings.customPrompt || '';
-    document.getElementById('customPrompt').value = customPromptValue;
-    updateCustomPromptCharCount(customPromptValue.length);
+    // Render user cards
+    renderUserCards();
 }
 
 function saveUserSettings() {
@@ -354,25 +369,122 @@ function updateApiKeyStatus(message, type) {
     }, 3000);
 }
 
-function handleRoleChange(e) {
-    AppState.userSettings.role = e.target.value;
+// ===== User Management Functions =====
+
+// Role-based default prompts
+const ROLE_PROMPTS = {
+    'developer': `Review this code change for implementation quality. Flag any potential bugs, performance issues, anti-patterns, or security concerns. Highlight non-obvious logic that future maintainers should understand.`,
+    
+    'product-manager': `Analyze this code change from a product perspective. Does it fulfill the stated requirements? Are there any scope gaps, missing edge cases from the spec, or unintended behavior changes that could affect users?`,
+    
+    'designer': `Identify any UI/UX-impacting changes in this diff. Look for hardcoded strings, layout or spacing changes, new user-facing states (loading, error, empty), and flag anything that might break visual consistency.`,
+    
+    'documentation': `Summarize what changed in plain English for documentation purposes. List any new or modified APIs, parameters, or behaviors that need to be reflected in user-facing or internal docs.`,
+    
+    'customer-support': `Explain what this change means for end users in simple, non-technical terms. Will users notice anything different? Are there new error messages, changed workflows, or known limitations they might ask about?`,
+    
+    'engineering-manager': `Give a high-level summary of this change: what problem it solves, its approach, estimated complexity, and any risks around deployment, rollback, or cross-team dependencies.`,
+    
+    'qa': `Identify scenarios that need testing in this change. List happy paths, edge cases, boundary conditions, and any regression risks. Flag areas where existing tests may be insufficient.`
+};
+
+function addUser() {
+    // Check max limit
+    if (AppState.userSettings.users.length >= 5) {
+        alert('⚠️ Maximum 5 users allowed');
+        return;
+    }
+    
+    // Create new user
+    const newUser = {
+        id: `user-${AppState.nextUserId}`,
+        name: '',
+        role: '',
+        prompt: ''
+    };
+    
+    AppState.userSettings.users.push(newUser);
+    AppState.nextUserId++;
+    
+    // Render and save
+    renderUserCards();
     saveUserSettings();
-    console.log(`👤 Role changed to: ${e.target.value}`);
+    
+    console.log(`➕ Added user: ${newUser.id}`);
 }
 
-function handleCustomPromptChange(e) {
-    AppState.userSettings.customPrompt = e.target.value;
-    updateCustomPromptCharCount(e.target.value.length);
-    // Don't auto-save on every keystroke, wait for Save button
+function removeUser(userId) {
+    if (!confirm('⚠️ Are you sure you want to remove this user?')) {
+        return;
+    }
+    
+    // Remove from array
+    AppState.userSettings.users = AppState.userSettings.users.filter(u => u.id !== userId);
+    
+    // Render and save
+    renderUserCards();
+    saveUserSettings();
+    
+    console.log(`🗑️ Removed user: ${userId}`);
 }
 
-function updateCustomPromptCharCount(count) {
-    const counter = document.getElementById('customPromptCharCount');
+function handleUserNameChange(userId, name) {
+    const user = AppState.userSettings.users.find(u => u.id === userId);
+    if (user) {
+        user.name = name;
+        saveUserSettings();
+    }
+}
+
+function handleUserRoleChange(userId, role) {
+    const user = AppState.userSettings.users.find(u => u.id === userId);
+    if (!user) return;
+    
+    // If user already has a custom prompt, confirm before overwriting
+    if (user.prompt && user.prompt !== ROLE_PROMPTS[user.role]) {
+        if (!confirm('⚠️ Changing the role will reset the prompt to the default. Continue?')) {
+            // Revert the select back to previous role
+            const selectElement = document.querySelector(`[data-user-id="${userId}"] .user-role-select`);
+            if (selectElement) {
+                selectElement.value = user.role;
+            }
+            return;
+        }
+    }
+    
+    user.role = role;
+    user.prompt = ROLE_PROMPTS[role] || '';
+    
+    // Update the prompt textarea
+    const promptTextarea = document.querySelector(`[data-user-id="${userId}"] .user-prompt-textarea`);
+    if (promptTextarea) {
+        promptTextarea.value = user.prompt;
+        updatePromptCharCount(userId, user.prompt.length);
+    }
+    
+    saveUserSettings();
+}
+
+function handleUserPromptChange(userId, prompt) {
+    const user = AppState.userSettings.users.find(u => u.id === userId);
+    if (user) {
+        user.prompt = prompt;
+        updatePromptCharCount(userId, prompt.length);
+        // Debounced save
+        clearTimeout(user.saveTimeout);
+        user.saveTimeout = setTimeout(() => {
+            saveUserSettings();
+        }, 500);
+    }
+}
+
+function updatePromptCharCount(userId, count) {
+    const counter = document.querySelector(`[data-user-id="${userId}"] .prompt-char-count`);
     if (counter) {
-        counter.textContent = `${count}/64`;
+        counter.textContent = `${count}/500`;
         
         // Change color if approaching limit
-        if (count > 57) {
+        if (count > 450) {
             counter.style.color = 'var(--warning-amber)';
         } else {
             counter.style.color = 'var(--text-light)';
@@ -380,14 +492,148 @@ function updateCustomPromptCharCount(count) {
     }
 }
 
-function saveAllSettings() {
-    // Save custom prompt
-    AppState.userSettings.customPrompt = document.getElementById('customPrompt').value.trim();
-    saveUserSettings();
+function isUserValid(user) {
+    return user.name && user.name.trim() !== '' && user.role && user.role !== '';
+}
+
+function updateCardValidation(card, userId) {
+    const user = AppState.userSettings.users.find(u => u.id === userId);
+    if (!user) return;
     
-    // Show success message
-    alert('✅ All settings saved successfully!');
-    console.log('💾 All settings saved');
+    const isValid = isUserValid(user);
+    const warningDiv = card.querySelector('.user-card-warning');
+    
+    if (isValid) {
+        card.classList.remove('user-card-invalid');
+        if (warningDiv) {
+            warningDiv.remove();
+        }
+    } else {
+        card.classList.add('user-card-invalid');
+        if (!warningDiv) {
+            const warning = document.createElement('div');
+            warning.className = 'user-card-warning';
+            warning.textContent = '⚠️ Required fields not set. This user will not be available for tagging.';
+            card.appendChild(warning);
+        }
+    }
+    
+    // Update add user button state
+    updateAddUserButton();
+}
+
+function renderUserCards() {
+    const container = document.getElementById('usersContainer');
+    if (!container) return;
+    
+    // Clear existing cards
+    container.innerHTML = '';
+    
+    // Render each user
+    AppState.userSettings.users.forEach((user, index) => {
+        const userCard = createUserCard(user, index + 1);
+        container.appendChild(userCard);
+    });
+    
+    // Update Add User button
+    updateAddUserButton();
+}
+
+function createUserCard(user, userNumber) {
+    const card = document.createElement('div');
+    const isValid = isUserValid(user);
+    card.className = isValid ? 'user-card' : 'user-card user-card-invalid';
+    card.setAttribute('data-user-id', user.id);
+    
+    const warningHtml = !isValid ? `
+        <div class="user-card-warning">
+            ⚠️ Required fields not set. This user will not be available for tagging.
+        </div>
+    ` : '';
+    
+    card.innerHTML = `
+        <div class="user-card-header">
+            <span class="user-number">User ${userNumber}</span>
+            <button class="remove-user-btn" onclick="removeUser('${user.id}')">
+                🗑️ Remove
+            </button>
+        </div>
+        ${warningHtml}
+        <div class="user-card-body">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text"
+                       class="user-name-input"
+                       placeholder="Enter user name..."
+                       maxlength="50"
+                       value="${user.name || ''}"
+                       required />
+            </div>
+            
+            <div class="form-group">
+                <label>Role *</label>
+                <select class="user-role-select" required>
+                    <option value="">-- Select Role --</option>
+                    <option value="developer" ${user.role === 'developer' ? 'selected' : ''}>Developer</option>
+                    <option value="product-manager" ${user.role === 'product-manager' ? 'selected' : ''}>Product Manager</option>
+                    <option value="designer" ${user.role === 'designer' ? 'selected' : ''}>Designer</option>
+                    <option value="documentation" ${user.role === 'documentation' ? 'selected' : ''}>Documentation</option>
+                    <option value="customer-support" ${user.role === 'customer-support' ? 'selected' : ''}>Customer Support</option>
+                    <option value="engineering-manager" ${user.role === 'engineering-manager' ? 'selected' : ''}>Engineering Manager</option>
+                    <option value="qa" ${user.role === 'qa' ? 'selected' : ''}>QA</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Prompt (Editable)</label>
+                <textarea class="user-prompt-textarea"
+                          rows="4"
+                          maxlength="500"
+                          placeholder="Select a role to load default prompt...">${user.prompt || ''}</textarea>
+                <div class="char-counter">
+                    <span class="prompt-char-count">${(user.prompt || '').length}/500</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Attach event listeners
+    const nameInput = card.querySelector('.user-name-input');
+    nameInput.addEventListener('input', (e) => {
+        handleUserNameChange(user.id, e.target.value);
+        // Update validation state without full re-render
+        updateCardValidation(card, user.id);
+    });
+    
+    const roleSelect = card.querySelector('.user-role-select');
+    roleSelect.addEventListener('change', (e) => {
+        handleUserRoleChange(user.id, e.target.value);
+        // Update validation state without full re-render
+        updateCardValidation(card, user.id);
+    });
+    
+    const promptTextarea = card.querySelector('.user-prompt-textarea');
+    promptTextarea.addEventListener('input', (e) => handleUserPromptChange(user.id, e.target.value));
+    
+    return card;
+}
+
+function updateAddUserButton() {
+    const button = document.getElementById('addUserBtn');
+    if (!button) return;
+    
+    const userCount = AppState.userSettings.users.length;
+    button.textContent = `➕ Add User (${userCount}/5)`;
+    
+    if (userCount >= 5) {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+        button.style.cursor = 'not-allowed';
+    } else {
+        button.disabled = false;
+        button.style.opacity = '1';
+        button.style.cursor = 'pointer';
+    }
 }
 
 // ===== Monaco Editor Initialization =====
@@ -433,14 +679,12 @@ function initEventListeners() {
     const closeModal = document.getElementById('closeModal');
     const modalOverlay = document.getElementById('modalOverlay');
     const cancelTaskBtn = document.getElementById('cancelTaskBtn');
-    const saveTaskBtn = document.getElementById('saveTaskBtn');
     
     newTaskBtn.addEventListener('click', openNewTaskModal);
     clearAllBtn.addEventListener('click', clearAllData);
     closeModal.addEventListener('click', closeTaskModal);
     modalOverlay.addEventListener('click', closeTaskModal);
     cancelTaskBtn.addEventListener('click', closeTaskModal);
-    saveTaskBtn.addEventListener('click', saveTask);
     
     // Character counters
     const taskTitle = document.getElementById('taskTitle');
@@ -478,6 +722,15 @@ function openNewTaskModal() {
     
     updateCharCount('title', 0, 80);
     updateCharCount('desc', 0, 255);
+    
+    // Clear tagged users
+    const taggedContainer = document.getElementById('taggedUsersContainer');
+    if (taggedContainer) {
+        taggedContainer.innerHTML = '';
+    }
+    
+    // Populate user tag dropdown
+    populateUserTagDropdown();
     
     // Show modal
     document.getElementById('taskModal').classList.add('show');
@@ -652,6 +905,107 @@ function clearAllData() {
     
     console.log('✅ All tasks cleared');
     alert('✅ All tasks have been cleared successfully!');
+}
+
+// ===== User Tagging Functions =====
+function getValidUsers() {
+    return AppState.userSettings.users.filter(u => isUserValid(u));
+}
+
+function populateUserTagDropdown() {
+    const select = document.getElementById('userTagSelect');
+    if (!select) return;
+    
+    const validUsers = getValidUsers();
+    
+    // Clear existing options except first
+    select.innerHTML = '<option value="">-- Tag a user --</option>';
+    
+    // Add valid users
+    validUsers.forEach(user => {
+        const option = document.createElement('option');
+        option.value = user.id;
+        option.textContent = `${user.name} (${user.role})`;
+        select.appendChild(option);
+    });
+    
+    // Add change event listener
+    select.onchange = function() {
+        if (this.value) {
+            addUserTagToTask(this.value);
+            this.value = ''; // Reset dropdown
+        }
+    };
+}
+
+function addUserTagToTask(userId) {
+    const taskId = AppState.currentEditingTask;
+    if (!taskId) return;
+    
+    const task = TaskManager.getTaskById(taskId);
+    if (!task) return;
+    
+    // Initialize taggedUsers if not exists
+    if (!task.taggedUsers) {
+        task.taggedUsers = [];
+    }
+    
+    // Check if already tagged
+    if (task.taggedUsers.includes(userId)) {
+        return;
+    }
+    
+    // Add user
+    task.taggedUsers.push(userId);
+    
+    // Re-render tags
+    renderTaggedUsers(task);
+    
+    // Save
+    saveToLocalStorage();
+}
+
+function removeUserTagFromTask(userId) {
+    const taskId = AppState.currentEditingTask;
+    if (!taskId) return;
+    
+    const task = TaskManager.getTaskById(taskId);
+    if (!task) return;
+    
+    // Remove user
+    task.taggedUsers = task.taggedUsers.filter(id => id !== userId);
+    
+    // Re-render tags
+    renderTaggedUsers(task);
+    
+    // Save
+    saveToLocalStorage();
+}
+
+function renderTaggedUsers(task) {
+    const container = document.getElementById('taggedUsersContainer');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!task.taggedUsers || task.taggedUsers.length === 0) {
+        return;
+    }
+    
+    task.taggedUsers.forEach(userId => {
+        const user = AppState.userSettings.users.find(u => u.id === userId);
+        if (!user || !isUserValid(user)) return;
+        
+        const tag = document.createElement('div');
+        tag.className = 'user-tag';
+        tag.innerHTML = `
+            ${user.name}
+            <button class="user-tag-remove" onclick="removeUserTagFromTask('${userId}')" type="button">
+                ×
+            </button>
+        `;
+        container.appendChild(tag);
+    });
 }
 
 // ===== Utility Functions =====

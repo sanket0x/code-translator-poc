@@ -165,38 +165,19 @@
                     </div>
                 </section>
                 
-                <!-- Role Selection Section -->
+                <!-- Users Configuration Section -->
                 <section class="settings-section">
-                    <h3 class="section-title">👤 Role Selection</h3>
-                    <div class="role-selection">
-                        <label for="roleSelect" class="input-label">I'm a:</label>
-                        <select id="roleSelect" class="settings-select">
-                            <option value="software-engineer">Software Engineer</option>
-                            <option value="product-manager">Product Manager</option>
-                            <option value="business-analyst">Business Analyst</option>
-                        </select>
+                    <div class="section-header">
+                        <h3 class="section-title">👥 Users Configuration</h3>
+                        <button id="addUserBtn" class="btn-primary btn-compact">
+                            ➕ Add User (0/5)
+                        </button>
                     </div>
-                    <p class="help-text">This determines how code analysis is explained to you.</p>
-                </section>
-                
-                <!-- Custom Prompt Section -->
-                <section class="settings-section">
-                    <h3 class="section-title">✏️ Custom Prompt (Optional)</h3>
-                    <div class="warning-box">
-                        <span class="warning-icon">⚠️</span>
-                        <span class="warning-text">This will completely override default role-based prompts</span>
+                    <p class="help-text">Add up to 5 users. Each user will receive a code explanation based on their role when you create a PR.</p>
+                    
+                    <div id="usersContainer" class="users-container">
+                        <!-- User cards will be dynamically added here -->
                     </div>
-                    <textarea
-                        id="customPrompt"
-                        class="settings-textarea"
-                        rows="6"
-                        maxlength="64"
-                        placeholder="Enter your custom prompt here... (e.g., 'Explain this code as if I'm a 5-year-old')"
-                    ></textarea>
-                    <div class="char-counter">
-                        <span id="customPromptCharCount">0/64</span>
-                    </div>
-                    <button id="saveSettingsBtn" class="btn-primary btn-large">💾 Save All Settings</button>
                 </section>
             </div>
         </div>
@@ -212,19 +193,29 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label for="taskTitle">Title <span class="char-count" id="titleCharCount">0/80</span></label>
-                    <input 
-                        type="text" 
-                        id="taskTitle" 
-                        class="form-input" 
+                    <input
+                        type="text"
+                        id="taskTitle"
+                        class="form-input"
                         maxlength="80"
                         placeholder="Enter task title..."
                     />
                 </div>
                 <div class="form-group">
+                    <label for="taggedUsers">Tagged Users</label>
+                    <div id="taggedUsersContainer" class="tagged-users-container">
+                        <!-- Tagged users will appear here -->
+                    </div>
+                    <select id="userTagSelect" class="form-select">
+                        <option value="">-- Tag a user --</option>
+                        <!-- Options populated dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
                     <label for="taskDescription">Description <span class="char-count" id="descCharCount">0/255</span></label>
-                    <textarea 
-                        id="taskDescription" 
-                        class="form-textarea" 
+                    <textarea
+                        id="taskDescription"
+                        class="form-textarea"
                         maxlength="255"
                         placeholder="Enter task description..."
                         rows="4"
@@ -235,8 +226,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="cancelTaskBtn" class="btn-secondary">Cancel</button>
-                <button id="saveTaskBtn" class="btn-primary">Save Task</button>
+                <button id="cancelTaskBtn" class="btn-secondary">Close</button>
             </div>
         </div>
     </div>
@@ -249,8 +239,8 @@
     
     <!-- JavaScript -->
     <script src="config.js?v=20260516041630"></script>
+    <script src="app.js?v=20260516041630"></script>
     <script src="taskManager.js?v=20260516041630"></script>
     <script src="prProcessor.js?v=20260516041630"></script>
-    <script src="app.js?v=20260516041630"></script>
 </body>
 </html>
