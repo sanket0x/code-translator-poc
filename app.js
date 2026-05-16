@@ -161,7 +161,7 @@ let monacoEditor = null;
 
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Code Translator POC initialized');
+    console.log('Code Translator POC initialized');
     
     // Load data from localStorage FIRST
     loadFromLocalStorage();
@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
         TaskManager.init();
     }
     
-    console.log('✅ All systems ready');
+    console.log('All systems ready');
 });
 
 // ===== Tab Navigation =====
@@ -241,10 +241,27 @@ function initUserSettings() {
     // Add User button
     document.getElementById('addUserBtn').addEventListener('click', addUser);
     
+    // Toggle API Key visibility
+    const toggleApiKeyBtn = document.getElementById('toggleApiKeyBtn');
+    const apiKeyInput = document.getElementById('settingsApiKey');
+    if (toggleApiKeyBtn && apiKeyInput) {
+        toggleApiKeyBtn.addEventListener('click', () => {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleApiKeyBtn.textContent = '🙈';
+                toggleApiKeyBtn.title = 'Hide API Key';
+            } else {
+                apiKeyInput.type = 'password';
+                toggleApiKeyBtn.textContent = '👁️';
+                toggleApiKeyBtn.title = 'Show API Key';
+            }
+        });
+    }
+    
     // Update UI with current provider
     updateProviderUI();
     
-    console.log('⚙️ User settings initialized');
+    console.log('User settings initialized');
 }
 
 function loadUserSettings() {
@@ -255,7 +272,7 @@ function loadUserSettings() {
             
             // Migration: Convert old single-user format to new multi-user format
             if (loadedSettings.role && !loadedSettings.users) {
-                console.log('🔄 Migrating old user settings format...');
+                console.log('Migrating old user settings format...');
                 
                 // Migrate to new format but start with empty users array
                 loadedSettings = {
@@ -271,9 +288,9 @@ function loadUserSettings() {
             }
             
             AppState.userSettings = loadedSettings;
-            console.log('📂 User settings loaded from localStorage');
+            console.log('User settings loaded from localStorage');
         } catch (error) {
-            console.error('❌ Error loading user settings:', error);
+            console.error('Error loading user settings:', error);
             // Use defaults
             AppState.userSettings = {
                 provider: 'gemini',
@@ -282,7 +299,7 @@ function loadUserSettings() {
             };
         }
     } else {
-        console.log('📂 No saved settings found, using defaults');
+        console.log('No saved settings found, using defaults');
     }
     
     // Ensure users array exists in AppState
@@ -302,7 +319,7 @@ function loadUserSettings() {
 
 function saveUserSettings() {
     localStorage.setItem('user_settings', JSON.stringify(AppState.userSettings));
-    console.log('💾 User settings saved to localStorage');
+    console.log('User settings saved to localStorage');
 }
 
 function handleProviderChange(e) {
@@ -343,7 +360,7 @@ function saveApiKey() {
         AppState.userSettings.apiKey = apiKey;
         saveUserSettings();
         updateApiKeyStatus('✓ API Key Saved', 'success');
-        console.log('🔑 API key saved');
+        console.log('API key saved');
     } else {
         updateApiKeyStatus('✗ Please enter an API key', 'error');
     }
@@ -355,7 +372,7 @@ function clearApiKey() {
         document.getElementById('settingsApiKey').value = '';
         saveUserSettings();
         updateApiKeyStatus('🗑️ API Key Cleared', 'success');
-        console.log('🗑️ API key cleared');
+        console.log('API key cleared');
     }
 }
 
@@ -556,7 +573,7 @@ function createUserCard(user, userNumber) {
         <div class="user-card-header">
             <span class="user-number">User ${userNumber}</span>
             <button class="remove-user-btn" onclick="removeUser('${user.id}')">
-                🗑️ Remove
+                Remove
             </button>
         </div>
         ${warningHtml}
@@ -668,7 +685,7 @@ function initMonacoEditor() {
             saveToLocalStorage();
         });
         
-        console.log('✅ Monaco Editor initialized');
+        console.log('Monaco Editor initialized');
     });
 }
 
@@ -715,7 +732,7 @@ function initEventListeners() {
 
 // ===== Modal Management =====
 function openNewTaskModal() {
-    console.log('📝 Opening new task modal');
+    console.log('Opening new task modal');
     
     // Create a temporary task ID for tagging (don't add to tasks array yet)
     const tempTaskId = `temp-${Date.now()}`;
@@ -790,11 +807,11 @@ function deleteCurrentTask() {
 }
 
 function closeTaskModal() {
-    console.log('❌ Closing task modal');
+    console.log('Closing task modal');
     
     // Clean up temporary task if it exists
     if (AppState.currentEditingTask && AppState.currentEditingTask.startsWith('temp-')) {
-        console.log('🗑️ Discarding temporary task:', AppState.currentEditingTask);
+        console.log('Discarding temporary task:', AppState.currentEditingTask);
         AppState.tempTask = null;
     }
     
@@ -867,13 +884,13 @@ function handlePrTitleChange(e) {
 
 
 function handleCreatePR() {
-    console.log('🚀 Create PR clicked');
+    console.log('Create PR clicked');
     
     // Delegate to PR Processor
     if (typeof PRProcessor !== 'undefined') {
         PRProcessor.handleCreatePR();
     } else {
-        console.error('❌ PR Processor not loaded');
+        console.error('PR Processor not loaded');
         showPrStatus('Error: PR Processor not loaded', 'error');
     }
 }
@@ -898,7 +915,7 @@ function saveToLocalStorage() {
     };
     
     localStorage.setItem('code_translator_data', JSON.stringify(data));
-    console.log('💾 Data saved to localStorage');
+    console.log('Data saved to localStorage');
 }
 
 function loadFromLocalStorage() {
@@ -916,16 +933,16 @@ function loadFromLocalStorage() {
                 prTitle: ''
             };
             
-            console.log('📂 Data loaded from localStorage');
+            console.log('Data loaded from localStorage');
             
             // Update UI
             document.getElementById('prTitle').value = AppState.codeEditorState.prTitle || '';
             
         } catch (error) {
-            console.error('❌ Error loading data from localStorage:', error);
+            console.error('Error loading data from localStorage:', error);
         }
     } else {
-        console.log('📂 No saved data found, using defaults');
+        console.log('No saved data found, using defaults');
     }
 }
 
@@ -944,7 +961,7 @@ function clearAllData() {
         return;
     }
     
-    console.log('🗑️ Clearing all tasks...');
+    console.log('Clearing all tasks...');
     
     // Reset only tasks
     AppState.tasks = [];
@@ -958,7 +975,7 @@ function clearAllData() {
         TaskManager.renderAllTasks();
     }
     
-    console.log('✅ All tasks cleared');
+    console.log('All tasks cleared');
     alert('✅ All tasks have been cleared successfully!');
 }
 

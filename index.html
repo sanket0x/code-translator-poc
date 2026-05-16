@@ -41,8 +41,8 @@
                     </button>
                 </div>
                 <div class="tab-header-right">
-                    <button id="clearAllBtn" class="btn-secondary btn-danger">
-                        <span>🗑️</span> Clear All Tasks
+                    <button id="clearAllBtn" class="btn-danger">
+                        Clear All Tasks
                     </button>
                 </div>
             </div>
@@ -128,12 +128,11 @@
         <!-- Tab 3: User Settings -->
         <div id="settingsTab" class="tab-content">
             <div class="settings-container">
-                <h2 class="settings-title">⚙️ User Settings</h2>
                 
                 <!-- API Provider Section -->
                 <section class="settings-section">
-                    <h3 class="section-title">🔑 API Provider Configuration</h3>
-                    <div class="provider-selection">
+                    <h3 class="section-title">API Provider Configuration</h3>
+                    <div class="provider-selection" style="margin-top: 16px;">
                         <label class="radio-label">
                             <input type="radio" name="provider" value="gemini" checked>
                             <span class="radio-text">
@@ -149,16 +148,21 @@
                     </div>
                     
                     <div class="api-key-section">
-                        <label for="settingsApiKey" class="input-label">API Key:</label>
-                        <input
-                            type="password"
-                            id="settingsApiKey"
-                            class="settings-input"
-                            placeholder="Enter your API key..."
-                        />
+                        <label for="settingsApiKey" class="input-label">API Key</label>
+                        <div class="input-with-icon">
+                            <input
+                                type="password"
+                                id="settingsApiKey"
+                                class="settings-input"
+                                placeholder="Enter your API key..."
+                            />
+                            <button type="button" id="toggleApiKeyBtn" class="toggle-password-btn-inside" title="Show/Hide API Key">
+                                👁️
+                            </button>
+                        </div>
                         <div class="button-group">
-                            <button id="saveApiKeyBtn" class="btn-primary">💾 Save API Key</button>
-                            <button id="clearApiKeyBtn" class="btn-secondary">🗑️ Clear API Key</button>
+                            <button id="saveApiKeyBtn" class="btn-primary">Save</button>
+                            <button id="clearApiKeyBtn" class="btn-secondary">Clear</button>
                         </div>
                         <span id="apiKeyStatus" class="status-message"></span>
                         <p class="help-text" id="providerInstructions"></p>
@@ -168,9 +172,9 @@
                 <!-- Users Configuration Section -->
                 <section class="settings-section">
                     <div class="section-header">
-                        <h3 class="section-title">👥 Users Configuration</h3>
+                        <h3 class="section-title">Users Configuration</h3>
                         <button id="addUserBtn" class="btn-primary btn-compact">
-                            ➕ Add User (0/5)
+                            Add User (0/5)
                         </button>
                     </div>
                     <p class="help-text">Add up to 5 users. Each user will receive a code explanation based on their role when you create a PR.</p>

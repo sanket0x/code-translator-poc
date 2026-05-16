@@ -943,7 +943,33 @@ body {
 .settings-input:focus {
     outline: none;
     border-color: var(--primary-blue);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-with-icon .settings-input {
+    padding-right: 40px;
+}
+
+.toggle-password-btn-inside {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    opacity: 0.6;
+    transition: opacity var(--transition-fast);
+    z-index: 10;
+}
+
+.toggle-password-btn-inside:hover {
+    opacity: 1;
 }
 
 .button-group {
