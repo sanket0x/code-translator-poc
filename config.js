@@ -5,13 +5,13 @@ const CONFIG = {
     // Provider Details
     providers: {
         openai: {
-            name: 'OpenAI GPT-3.5-Turbo',
+            name: 'OpenAI GPT',
             apiKeyLabel: 'OpenAI API Key',
             keyPlaceholder: 'sk-...',
             instructions: 'Get your API key from https://platform.openai.com/api-keys'
         },
         gemini: {
-            name: 'Google Gemini 1.5 Flash',
+            name: 'Google Gemini',
             apiKeyLabel: 'Google AI API Key',
             keyPlaceholder: 'AIza...',
             instructions: 'Get your FREE API key from https://aistudio.google.com/app/apikey'

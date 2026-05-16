@@ -338,14 +338,13 @@ const TaskManager = {
             const task = this.createTask(title, description);
         } else if (taskId.startsWith('temp-')) {
             // Converting temporary task to real task
-            const tempTask = this.getTaskById(taskId);
-            const taggedUsers = tempTask ? tempTask.taggedUsers : [];
-            
-            // Remove temporary task
-            AppState.tasks = AppState.tasks.filter(t => t.id !== taskId);
+            const taggedUsers = AppState.tempTask ? AppState.tempTask.taggedUsers : [];
             
             // Create real task with tagged users
             const task = this.createTask(title, description, taggedUsers);
+            
+            // Clean up temp task
+            AppState.tempTask = null;
         } else {
             // Updating existing task
             const task = this.getTaskById(taskId);

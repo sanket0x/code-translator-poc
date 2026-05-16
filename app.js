@@ -9,6 +9,7 @@ const AppState = {
     tasks: [],
     nextTaskId: 1,
     currentEditingTask: null,
+    tempTask: null,  // Temporary task for new task creation
     codeEditorState: {
         language: 'go',
         code: '',
@@ -714,9 +715,12 @@ function initEventListeners() {
 function openNewTaskModal() {
     console.log('📝 Opening new task modal');
     
-    // Create a temporary task for tagging
+    // Create a temporary task ID for tagging (don't add to tasks array yet)
+    const tempTaskId = `temp-${Date.now()}`;
+    
+    // Create a temporary task object for tagging purposes
     const tempTask = {
-        id: `temp-${Date.now()}`,
+        id: tempTaskId,
         title: '',
         description: '',
         status: 'todo',
@@ -725,9 +729,9 @@ function openNewTaskModal() {
         createdAt: new Date().toISOString()
     };
     
-    // Add to tasks array temporarily
-    AppState.tasks.push(tempTask);
-    AppState.currentEditingTask = tempTask.id;
+    // Store temp task separately (not in main tasks array)
+    AppState.tempTask = tempTask;
+    AppState.currentEditingTask = tempTaskId;
     
     // Reset form
     document.getElementById('modalTitle').textContent = 'New Task';
@@ -758,9 +762,10 @@ function openNewTaskModal() {
 function closeTaskModal() {
     console.log('❌ Closing task modal');
     
-    // Remove temporary task if it exists
+    // Clean up temporary task if it exists
     if (AppState.currentEditingTask && AppState.currentEditingTask.startsWith('temp-')) {
-        AppState.tasks = AppState.tasks.filter(t => t.id !== AppState.currentEditingTask);
+        console.log('🗑️ Discarding temporary task:', AppState.currentEditingTask);
+        AppState.tempTask = null;
     }
     
     document.getElementById('taskModal').classList.remove('show');
@@ -962,7 +967,14 @@ function addUserTagToTask(userId) {
     const taskId = AppState.currentEditingTask;
     if (!taskId) return;
     
-    const task = TaskManager.getTaskById(taskId);
+    // Check if it's a temp task or existing task
+    let task;
+    if (taskId.startsWith('temp-')) {
+        task = AppState.tempTask;
+    } else {
+        task = TaskManager.getTaskById(taskId);
+    }
+    
     if (!task) return;
     
     // Initialize taggedUsers if not exists
@@ -986,7 +998,14 @@ function removeUserTagFromTask(userId) {
     const taskId = AppState.currentEditingTask;
     if (!taskId) return;
     
-    const task = TaskManager.getTaskById(taskId);
+    // Check if it's a temp task or existing task
+    let task;
+    if (taskId.startsWith('temp-')) {
+        task = AppState.tempTask;
+    } else {
+        task = TaskManager.getTaskById(taskId);
+    }
+    
     if (!task) return;
     
     // Remove user

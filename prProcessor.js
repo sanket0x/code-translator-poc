@@ -87,12 +87,17 @@ const PRProcessor = {
     
     // ===== Prompt Construction =====
     
-    constructPromptForUser(user, code, language) {
+    constructPromptForUser(user, code, language, task) {
         // Use user's specific prompt (edited or default role-based)
         const prompt = user.prompt || ROLE_PROMPTS[user.role] || '';
         
         return `${prompt}
 
+**Task Context:**
+Task Title: ${task.title}
+Task Description: ${task.description || 'No description provided'}
+
+**Code Changes:**
 Analyze this ${language} code:
 
 \`\`\`${language}
@@ -102,7 +107,7 @@ ${code}
     
     // ===== AI Integration =====
     
-    async analyzeCodeForUser(user, code, language) {
+    async analyzeCodeForUser(user, code, language, task) {
         // Get API key from user settings
         const apiKey = AppState.userSettings.apiKey;
         
@@ -116,7 +121,7 @@ ${code}
         console.log(`🤖 Calling ${provider.name} to analyze code for ${user.name}...`);
         console.log(`👤 User role: ${user.role}`);
         
-        const prompt = this.constructPromptForUser(user, code, language);
+        const prompt = this.constructPromptForUser(user, code, language, task);
         
         try {
             const currentProvider = AppState.userSettings.provider;
@@ -290,7 +295,7 @@ ${code}
         for (const user of users) {
             try {
                 console.log(`🔄 Analyzing code for ${user.name} (${user.role})...`);
-                const explanation = await this.analyzeCodeForUser(user, code, language);
+                const explanation = await this.analyzeCodeForUser(user, code, language, task);
                 explanations.push({
                     userName: user.name,
                     userRole: user.role,
