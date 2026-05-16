@@ -266,7 +266,7 @@ Provide a concise explanation suitable for a non-technical stakeholder.`;
     
     async handleCreatePR() {
         const prTitle = document.getElementById('prTitle').value.trim();
-        const code = document.getElementById('codeEditor').value.trim();
+        const code = monacoEditor ? monacoEditor.getValue().trim() : '';
         const language = AppState.codeEditorState.language;
         
         // Validate inputs

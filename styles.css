@@ -442,77 +442,13 @@ body {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.code-editor-wrapper {
-    position: relative;
-    display: flex;
+.monaco-editor-wrapper {
     border: 1px solid var(--border-gray);
     border-radius: var(--radius-md);
     overflow: hidden;
     margin-bottom: var(--spacing-lg);
-    background-color: #2d2d2d;
-}
-
-.line-numbers {
-    padding: var(--spacing-md) var(--spacing-sm);
-    background-color: #1e1e1e;
-    color: #858585;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-    text-align: right;
-    user-select: none;
-    border-right: 1px solid #404040;
-    min-width: 50px;
-    white-space: pre;
-    overflow: hidden;
-}
-
-.code-display {
-    position: absolute;
-    top: 0;
-    left: 50px;
-    right: 0;
-    padding: var(--spacing-md);
-    margin: 0;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-    pointer-events: none;
-    white-space: pre;
-    overflow: hidden;
-    background-color: transparent;
-}
-
-.code-display code {
-    background: none !important;
-    padding: 0 !important;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.code-editor {
-    flex: 1;
-    padding: var(--spacing-md);
-    border: none;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
-    line-height: 1.5;
-    resize: vertical;
+    height: 500px;
     min-height: 400px;
-    background-color: transparent;
-    color: transparent;
-    caret-color: white;
-    position: relative;
-    z-index: 1;
-}
-
-.code-editor:focus {
-    outline: none;
-}
-
-.code-editor::selection {
-    background-color: rgba(255, 255, 255, 0.2);
 }
 
 /* ===== PR Section ===== */

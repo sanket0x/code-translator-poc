@@ -4,10 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Code Translator POC</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- Prism.js for syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    <link rel="stylesheet" href="styles.css?v=20260516041630">
+    <!-- Monaco Editor -->
+    <link rel="stylesheet" data-name="vs/editor/editor.main" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/editor/editor.main.min.css">
 </head>
 <body>
     <!-- Header -->
@@ -105,16 +104,7 @@
                     </select>
                 </div>
 
-                <div class="code-editor-wrapper">
-                    <div class="line-numbers" id="lineNumbers"></div>
-                    <pre class="code-display"><code id="codeHighlight" class="language-go"></code></pre>
-                    <textarea
-                        id="codeEditor"
-                        class="code-editor"
-                        placeholder="Write your code here..."
-                        spellcheck="false"
-                    ></textarea>
-                </div>
+                <div id="monacoEditorContainer" class="monaco-editor-wrapper"></div>
 
                 <div class="pr-section">
                     <label for="prTitle" class="pr-label">PR Title:</label>
@@ -176,16 +166,13 @@
     <!-- Overlay for modal -->
     <div id="modalOverlay" class="modal-overlay"></div>
 
-    <!-- Prism.js Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-go.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
     
     <!-- JavaScript -->
-    <script src="config.js"></script>
-    <script src="taskManager.js"></script>
-    <script src="prProcessor.js"></script>
-    <script src="app.js"></script>
+    <script src="config.js?v=20260516041630"></script>
+    <script src="taskManager.js?v=20260516041630"></script>
+    <script src="prProcessor.js?v=20260516041630"></script>
+    <script src="app.js?v=20260516041630"></script>
 </body>
 </html>

@@ -33,6 +33,9 @@ if __name__ == "__main__":
 }`
 };
 
+// ===== Monaco Editor Instance =====
+let monacoEditor = null;
+
 // ===== Initialization =====
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Code Translator POC initialized');
@@ -46,11 +49,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize API key
     initApiKey();
     
+    // Initialize Monaco Editor
+    initMonacoEditor();
+    
     // Initialize event listeners
     initEventListeners();
-    
-    // Set initial code editor content
-    updateCodeEditor();
     
     // Initialize Task Manager (after localStorage is loaded)
     if (typeof TaskManager !== 'undefined') {
@@ -130,6 +133,37 @@ function updateApiKeyStatus(message, type) {
     apiKeyStatus.className = `api-key-status ${type}`;
 }
 
+// ===== Monaco Editor Initialization =====
+function initMonacoEditor() {
+    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' } });
+    
+    require(['vs/editor/editor.main'], function () {
+        const container = document.getElementById('monacoEditorContainer');
+        
+        monacoEditor = monaco.editor.create(container, {
+            value: AppState.codeEditorState.code || DEFAULT_SNIPPETS[AppState.codeEditorState.language],
+            language: AppState.codeEditorState.language,
+            theme: 'vs-dark',
+            automaticLayout: true,
+            minimap: { enabled: false },
+            fontSize: 14,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            wordWrap: 'on',
+            tabSize: 4,
+            insertSpaces: true
+        });
+        
+        // Listen for content changes
+        monacoEditor.onDidChangeModelContent(() => {
+            AppState.codeEditorState.code = monacoEditor.getValue();
+            saveToLocalStorage();
+        });
+        
+        console.log('✅ Monaco Editor initialized');
+    });
+}
+
 // ===== Event Listeners =====
 function initEventListeners() {
     // Modal controls
@@ -154,14 +188,13 @@ function initEventListeners() {
     taskTitle.addEventListener('input', () => updateCharCount('title', taskTitle.value.length, 80));
     taskDescription.addEventListener('input', () => updateCharCount('desc', taskDescription.value.length, 255));
     
-    // Code editor
+    // Code editor language selector
     const languageSelect = document.getElementById('languageSelect');
-    const codeEditor = document.getElementById('codeEditor');
+    languageSelect.addEventListener('change', handleLanguageChange);
+    
+    // PR controls
     const prTitle = document.getElementById('prTitle');
     const createPrBtn = document.getElementById('createPrBtn');
-    
-    languageSelect.addEventListener('change', handleLanguageChange);
-    codeEditor.addEventListener('input', handleCodeChange);
     prTitle.addEventListener('input', handlePrTitleChange);
     createPrBtn.addEventListener('click', handleCreatePR);
 }
@@ -224,20 +257,16 @@ function handleLanguageChange(e) {
     
     AppState.codeEditorState.language = language;
     
-    // Load default snippet for new language
-    const codeEditor = document.getElementById('codeEditor');
-    codeEditor.value = DEFAULT_SNIPPETS[language];
-    AppState.codeEditorState.code = codeEditor.value;
+    if (monacoEditor) {
+        // Update Monaco editor language
+        const model = monacoEditor.getModel();
+        monaco.editor.setModelLanguage(model, language);
+        
+        // Load default snippet for new language
+        monacoEditor.setValue(DEFAULT_SNIPPETS[language]);
+        AppState.codeEditorState.code = DEFAULT_SNIPPETS[language];
+    }
     
-    updateLineNumbers();
-    updateSyntaxHighlighting();
-    saveToLocalStorage();
-}
-
-function handleCodeChange(e) {
-    AppState.codeEditorState.code = e.target.value;
-    updateLineNumbers();
-    updateSyntaxHighlighting();
     saveToLocalStorage();
 }
 
@@ -246,51 +275,6 @@ function handlePrTitleChange(e) {
     saveToLocalStorage();
 }
 
-function updateCodeEditor() {
-    const codeEditor = document.getElementById('codeEditor');
-    const languageSelect = document.getElementById('languageSelect');
-    
-    // Set language
-    languageSelect.value = AppState.codeEditorState.language;
-    
-    // Set code (use default snippet if empty)
-    if (!AppState.codeEditorState.code) {
-        codeEditor.value = DEFAULT_SNIPPETS[AppState.codeEditorState.language];
-        AppState.codeEditorState.code = codeEditor.value;
-    } else {
-        codeEditor.value = AppState.codeEditorState.code;
-    }
-    
-    updateLineNumbers();
-    updateSyntaxHighlighting();
-}
-
-function updateLineNumbers() {
-    const codeEditor = document.getElementById('codeEditor');
-    const lineNumbers = document.getElementById('lineNumbers');
-    
-    const lines = codeEditor.value.split('\n').length;
-    const numbers = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
-    
-    lineNumbers.textContent = numbers;
-}
-
-function updateSyntaxHighlighting() {
-    const codeEditor = document.getElementById('codeEditor');
-    const codeHighlight = document.getElementById('codeHighlight');
-    const language = AppState.codeEditorState.language;
-    
-    // Update the language class
-    codeHighlight.className = `language-${language}`;
-    
-    // Set the code content
-    codeHighlight.textContent = codeEditor.value;
-    
-    // Apply Prism highlighting
-    if (window.Prism) {
-        Prism.highlightElement(codeHighlight);
-    }
-}
 
 function handleCreatePR() {
     console.log('🚀 Create PR clicked');
@@ -404,12 +388,3 @@ function formatDate(timestamp) {
     return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
-// ===== Console Welcome Message =====
-console.log(`
-╔═══════════════════════════════════════╗
-║   🔄 Code Translator POC v1.0        ║
-║   Phase 1: Foundation Complete       ║
-╚═══════════════════════════════════════╝
-`);
-
-// Made with Bob
