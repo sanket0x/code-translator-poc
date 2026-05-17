@@ -265,9 +265,7 @@ const TaskManager = {
         document.getElementById('taskTitle').value = task.title;
         document.getElementById('taskDescription').value = task.description;
         
-        // Update character counts
         updateCharCount('title', task.title.length, 80);
-        updateCharCount('desc', task.description.length, 255);
         
         // Populate user tag dropdown and render tagged users
         if (typeof populateUserTagDropdown === 'function') {

@@ -708,12 +708,9 @@ function initEventListeners() {
     saveTaskBtn.addEventListener('click', saveTask);
     deleteTaskBtn.addEventListener('click', deleteCurrentTask);
     
-    // Character counters
+    // Character counter (title only)
     const taskTitle = document.getElementById('taskTitle');
-    const taskDescription = document.getElementById('taskDescription');
-    
     taskTitle.addEventListener('input', () => updateCharCount('title', taskTitle.value.length, 80));
-    taskDescription.addEventListener('input', () => updateCharCount('desc', taskDescription.value.length, 255));
     
     // Code editor language selector
     const languageSelect = document.getElementById('languageSelect');
@@ -759,7 +756,6 @@ function openNewTaskModal() {
     document.getElementById('taskComments').innerHTML = '';
     
     updateCharCount('title', 0, 80);
-    updateCharCount('desc', 0, 255);
     
     // Clear tagged users
     const taggedContainer = document.getElementById('taggedUsersContainer');
