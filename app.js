@@ -306,6 +306,8 @@ function loadUserSettings() {
     if (!AppState.userSettings.users) {
         AppState.userSettings.users = [];
     }
+
+    normalizeUserIds();
     
     // Update UI with loaded settings
     const providerRadio = document.querySelector(`input[name="provider"][value="${AppState.userSettings.provider}"]`);
@@ -406,6 +408,37 @@ const ROLE_PROMPTS = {
     'qa': `Identify scenarios that need testing in this change. List happy paths, edge cases, boundary conditions, and any regression risks. Flag areas where existing tests may be insufficient. Keep your summary to maximum 5 lines.`
 };
 
+function normalizeUserIds() {
+    const seen = new Set();
+    let maxNum = 0;
+    let changed = false;
+
+    AppState.userSettings.users.forEach(user => {
+        const match = user.id && user.id.match(/^user-(\d+)$/);
+        if (match && !seen.has(user.id)) {
+            const num = parseInt(match[1], 10);
+            seen.add(user.id);
+            maxNum = Math.max(maxNum, num);
+            return;
+        }
+
+        let newNum = maxNum + 1;
+        while (seen.has(`user-${newNum}`)) {
+            newNum++;
+        }
+        user.id = `user-${newNum}`;
+        seen.add(user.id);
+        maxNum = newNum;
+        changed = true;
+    });
+
+    AppState.nextUserId = maxNum + 1;
+
+    if (changed) {
+        saveUserSettings();
+    }
+}
+
 function addUser() {
     // Check max limit
     if (AppState.userSettings.users.length >= 5) {
@@ -435,14 +468,18 @@ function removeUser(userId) {
     if (!confirm('⚠️ Are you sure you want to remove this user?')) {
         return;
     }
-    
-    // Remove from array
-    AppState.userSettings.users = AppState.userSettings.users.filter(u => u.id !== userId);
-    
-    // Render and save
+
+    const index = AppState.userSettings.users.findIndex(u => u.id === userId);
+    if (index === -1) {
+        console.warn(`User not found for removal: ${userId}`);
+        return;
+    }
+
+    AppState.userSettings.users.splice(index, 1);
+
     renderUserCards();
     saveUserSettings();
-    
+
     console.log(`🗑️ Removed user: ${userId}`);
 }
 
@@ -454,15 +491,17 @@ function handleUserNameChange(userId, name) {
     }
 }
 
-function handleUserRoleChange(userId, role) {
+function handleUserRoleChange(userId, role, cardEl) {
     const user = AppState.userSettings.users.find(u => u.id === userId);
     if (!user) return;
+
+    const card = cardEl || document.querySelector(`[data-user-id="${userId}"]`);
     
     // If user already has a custom prompt, confirm before overwriting
     if (user.prompt && user.prompt !== ROLE_PROMPTS[user.role]) {
         if (!confirm('⚠️ Changing the role will reset the prompt to the default. Continue?')) {
             // Revert the select back to previous role
-            const selectElement = document.querySelector(`[data-user-id="${userId}"] .user-role-select`);
+            const selectElement = card?.querySelector('.user-role-select');
             if (selectElement) {
                 selectElement.value = user.role;
             }
@@ -473,21 +512,22 @@ function handleUserRoleChange(userId, role) {
     user.role = role;
     user.prompt = ROLE_PROMPTS[role] || '';
     
-    // Update the prompt textarea
-    const promptTextarea = document.querySelector(`[data-user-id="${userId}"] .user-prompt-textarea`);
+    // Update the prompt textarea on this card only
+    const promptTextarea = card?.querySelector('.user-prompt-textarea');
     if (promptTextarea) {
         promptTextarea.value = user.prompt;
-        updatePromptCharCount(userId, user.prompt.length);
+        updatePromptCharCount(user.prompt.length, card);
     }
     
     saveUserSettings();
 }
 
-function handleUserPromptChange(userId, prompt) {
+function handleUserPromptChange(userId, prompt, cardEl) {
     const user = AppState.userSettings.users.find(u => u.id === userId);
     if (user) {
         user.prompt = prompt;
-        updatePromptCharCount(userId, prompt.length);
+        const card = cardEl || document.querySelector(`[data-user-id="${userId}"]`);
+        updatePromptCharCount(prompt.length, card);
         // Debounced save
         clearTimeout(user.saveTimeout);
         user.saveTimeout = setTimeout(() => {
@@ -496,8 +536,8 @@ function handleUserPromptChange(userId, prompt) {
     }
 }
 
-function updatePromptCharCount(userId, count) {
-    const counter = document.querySelector(`[data-user-id="${userId}"] .prompt-char-count`);
+function updatePromptCharCount(count, cardEl) {
+    const counter = cardEl?.querySelector('.prompt-char-count');
     if (counter) {
         counter.textContent = `${count}/500`;
         
@@ -543,7 +583,9 @@ function updateCardValidation(card, userId) {
 function renderUserCards() {
     const container = document.getElementById('usersContainer');
     if (!container) return;
-    
+
+    normalizeUserIds();
+
     // Clear existing cards
     container.innerHTML = '';
     
@@ -572,7 +614,7 @@ function createUserCard(user, userNumber) {
     card.innerHTML = `
         <div class="user-card-header">
             <span class="user-number">User ${userNumber}</span>
-            <button class="remove-user-btn" onclick="removeUser('${user.id}')">
+            <button type="button" class="remove-user-btn">
                 Remove
             </button>
         </div>
@@ -615,6 +657,9 @@ function createUserCard(user, userNumber) {
         </div>
     `;
     
+    const removeBtn = card.querySelector('.remove-user-btn');
+    removeBtn.addEventListener('click', () => removeUser(user.id));
+
     // Attach event listeners
     const nameInput = card.querySelector('.user-name-input');
     nameInput.addEventListener('input', (e) => {
@@ -625,13 +670,13 @@ function createUserCard(user, userNumber) {
     
     const roleSelect = card.querySelector('.user-role-select');
     roleSelect.addEventListener('change', (e) => {
-        handleUserRoleChange(user.id, e.target.value);
+        handleUserRoleChange(user.id, e.target.value, card);
         // Update validation state without full re-render
         updateCardValidation(card, user.id);
     });
     
     const promptTextarea = card.querySelector('.user-prompt-textarea');
-    promptTextarea.addEventListener('input', (e) => handleUserPromptChange(user.id, e.target.value));
+    promptTextarea.addEventListener('input', (e) => handleUserPromptChange(user.id, e.target.value, card));
     
     return card;
 }
